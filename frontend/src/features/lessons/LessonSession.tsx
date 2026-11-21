@@ -1,9 +1,11 @@
 "use client";
 
+import { SessionSkeleton } from "@/components/ui/SessionSkeleton";
+import { RecordChip } from "@/components/ui/Record";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { BottomActions, PrimaryButton, TextButton } from "@/components/ui/buttons";
-import { ArrowRightIcon, CloseIcon } from "@/components/ui/icons";
+import { CloseIcon, ExternalIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
 import { api } from "@/lib/api";
@@ -11,16 +13,14 @@ import { isDueToday, lessonPageUrl, lessonProgress, nextCheckLabel, type LessonP
 import { serviceDate } from "@/lib/schedule";
 import { useRemote } from "@/lib/useRemote";
 import { RetrySolve, type RetrySummary } from "../solve/RetrySolve";
-import { LessonBody } from "./body/LessonBody";
 
-type Phase = "intro" | "body" | "solve" | "done";
+type Phase = "intro" | "solve" | "done";
 
 /**
  * 레슨 하나. 판정 문제를 모두 맞힐 때까지 묻는다. 틀린 문제는 다른 문제를 푼 뒤 다시 나온다.
  * 같은 날 모두 맞히면 배운 날 기준을 통과해 3일 뒤 다시 묻는다 (ADR-017, ADR-021).
  * 이미 배운 레슨(1단계 이상)은 다시 풀어도 연습으로만 기록되고 일정은 바뀌지 않는다.
- * - 본문이 있는 레슨: 본문 7단계(예측 → … → 확인(문제 풀기) → 면접 답변) → 결과
- * - 본문이 아직 없는 레슨: 소개(본문은 레슨 사이트 링크) → 문제 풀기 → 결과
+ * 순서: 레슨 사이트의 본문을 앱 안에 띄움 → 문제 풀기 → 결과 (ADR-024)
  */
 export function LessonSession({ lessonId }: { lessonId: number }) {
   const fetchLesson = useCallback(async () => {
@@ -39,14 +39,14 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   const [summary, setSummary] = useState<RetrySummary | null>(null);
 
   if (load.status === "loading") {
-    return <main className="app-frame" aria-busy="true" />;
+    return <SessionSkeleton />;
   }
   if (load.status === "error") {
     return <LoadError what="레슨을" message={load.message} onRetry={retry} />;
   }
 
   const { lesson, questions, learned } = load.data;
-  const phase: Phase = phaseState ?? (lesson.steps ? "body" : "intro");
+  const phase: Phase = phaseState ?? "intro";
 
   const start = () => {
     setRound((r) => r + 1);
@@ -55,67 +55,46 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
     window.scrollTo(0, 0);
   };
 
-  if (phase === "body" && lesson.steps) {
-    return (
-      <LessonBody
-        key={round}
-        lesson={lesson}
-        steps={lesson.steps}
-        questions={questions}
-        onFinish={(done) => {
-          setSummary(done);
-          setPhase("done");
-          window.scrollTo(0, 0);
-        }}
-      />
-    );
-  }
-
   if (phase === "intro") {
+    // 본문은 레슨 사이트의 페이지를 앱 안에 그대로 띄운다. 본문만 스크롤되고 닫기와 문제 풀기 버튼은 늘 보인다
     return (
-      <main className="app-frame">
+      <main className="app-frame h-dvh">
         <header className="grid h-14 shrink-0 grid-cols-[44px_1fr_44px] items-center px-3">
           <Link href="/lessons" aria-label="닫기" className="flex size-11 items-center justify-center">
             <CloseIcon />
           </Link>
+          <div className="truncate text-center text-[13px] font-medium text-muted">
+            {lesson.unit} <span className="text-ink">{lesson.title}</span>
+          </div>
+          <a
+            href={lessonPageUrl(lesson.key)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="레슨 본문을 새 탭에서 크게 보기"
+            className="flex size-11 items-center justify-center text-muted"
+          >
+            <ExternalIcon />
+          </a>
         </header>
-        <div className="px-6 pt-6">
-          <div className="text-[13px] text-muted">{lesson.unit}</div>
-          <h1 className="mt-2 text-[28px] leading-snug font-semibold tracking-[-0.8px]">{lesson.title}</h1>
-        </div>
-
-        <ol className="mx-6 mt-8 flex flex-col border-t border-line">
-          <Step n={1} title="본문 읽기">
-            예측부터 면접 답변까지 7단계. 지금은 레슨 사이트에서 열려요.
-            <a
-              href={lessonPageUrl(lesson.key)}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-ink underline underline-offset-2"
-            >
-              레슨 본문 열기
-              <ArrowRightIcon size={14} />
-            </a>
-          </Step>
-          <Step n={2} title={questions.length > 1 ? `문제 ${questions.length}개를 모두 맞힐 때까지` : "문제를 맞힐 때까지"}>
-            답과 확신도를 고르면 해설이 열려요. 틀린 문제는 해설을 읽고, 다른 문제를 푼 뒤에 다시 풀어요.
-          </Step>
-          <Step n={3} title="3일 뒤 다시 확인">
-            {learned
-              ? "이미 배운 레슨이에요. 다시 풀어도 연습으로만 남고, 3일·7일·21일 확인 일정은 바뀌지 않아요."
-              : "모두 맞히면 배운 날로 쳐요. 3일·7일·21일 뒤에 다시 물어요."}
-          </Step>
-        </ol>
-
-        <BottomActions>
+        <iframe
+          src={lessonPageUrl(lesson.key, true)}
+          title={`${lesson.title} 레슨 본문`}
+          className="min-h-0 w-full flex-1 border-t border-line bg-white"
+        />
+        <div className="bottom-bar shrink-0 px-6 pt-4 pb-6">
+          {learned && (
+            <p className="pb-2 text-center text-[13px] text-muted">
+              이미 배운 레슨이에요. 다시 풀어도 확인 일정은 바뀌지 않아요.
+            </p>
+          )}
           <PrimaryButton onClick={start} disabled={questions.length === 0}>
             {questions.length === 0
               ? "아직 풀 문제가 없어요"
               : learned
                 ? "다시 풀어 보기"
-                : `문제 ${questions.length}개 풀기`}
+                : `다 읽었으면 문제 ${questions.length}개 풀기`}
           </PrimaryButton>
-        </BottomActions>
+        </div>
       </main>
     );
   }
@@ -128,7 +107,7 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
     <RetrySolve
       key={round}
       questions={questions}
-      context={`${lesson.unit} · ${lesson.title}`}
+      context={`${lesson.unit} ${lesson.title}`}
       mode="LESSON"
       topBar={(solved, total) => (
         <SessionTopBar title={`${solved} / ${total} 맞힘`} current={solved} total={total} closeHref="/lessons" />
@@ -140,18 +119,6 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
         window.scrollTo(0, 0);
       }}
     />
-  );
-}
-
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <li className="flex gap-4 border-b border-line py-4">
-      <span className="w-4 pt-px text-[13px] font-semibold text-faint">{n}</span>
-      <div className="min-w-0 flex-1">
-        <div className="text-[15px] font-semibold tracking-[-0.2px]">{title}</div>
-        <div className="mt-1 text-[13px] leading-relaxed text-muted">{children}</div>
-      </div>
-    </li>
   );
 }
 
@@ -177,18 +144,23 @@ function LessonDone({
   const learning = progress !== null && progress.state === "managed" && progress.passed === 0;
 
   return (
-    <main className="app-frame">
+    <main className="app-frame celebrate">
       <div className="fade-up px-6 pt-24">
         <div className="text-[13px] text-muted">처음에 맞힌 문제</div>
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-[88px] leading-[0.9] font-semibold tracking-[-5px]">{correct}</span>
-          <span className="text-lg text-soft">/ {total}</span>
+          <span className="text-[88px] leading-[0.95] font-semibold tracking-[-5px]">{correct}</span>
+          <span className="text-[17px] text-soft">/ {total}</span>
         </div>
-        <div className="mt-6 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(total, 1)}, minmax(0, 1fr))` }}>
+        <div className="mt-6 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.max(total, 1)}, minmax(0, 1fr))` }}>
           {Array.from({ length: total }, (_, i) => (
-            <span key={i} className={`h-1.5 rounded-full ${i < correct ? "bg-gold" : "bg-line-strong"}`} />
+            <span key={i} className={`h-2 rounded-full ${i < correct ? "bar-fill" : "bg-line-strong"}`} />
           ))}
         </div>
+        {progress && progress.best >= 1 && (
+          <div className="mt-6 flex">
+            <RecordChip best={progress.best} />
+          </div>
+        )}
         {retried > 0 && (
           <p className="mt-6 text-[15px] leading-relaxed text-ink">틀렸던 {retried}문제도 다시 풀어 모두 맞혔어요.</p>
         )}
@@ -206,7 +178,7 @@ function LessonDone({
 
 function NextStep({ progress: p }: { progress: LessonProgress }) {
   if (p.state === "graduated") {
-    return <>졸업한 레슨이에요. 다시 풀어도 복습 일정은 바뀌지 않아요.</>;
+    return <>장기 기억이 된 레슨이에요. 다시 풀어도 복습 일정은 바뀌지 않아요.</>;
   }
   if (p.state === "new" || p.passed === 0) {
     return <>아직 배우는 중이에요. 같은 날 문제를 모두 맞히면 3일 뒤에 다시 물어요.</>;

@@ -62,7 +62,7 @@ export function RetrySolve({
     <QuestionFlow
       key={`${index}-${shown}`}
       question={question}
-      context={retry ? `${context} · 틀렸던 문제 다시` : context}
+      context={retry ? `${context}, 틀렸던 문제 다시` : context}
       mode={mode}
       topBar={topBar(solvedCount(queue), questions.length)}
       nextLabel={nextLabel}

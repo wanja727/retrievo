@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionSkeleton } from "@/components/ui/SessionSkeleton";
 import { useState } from "react";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
@@ -7,7 +8,7 @@ import { api, type SubmissionResult } from "@/lib/api";
 import { TOTAL_CHECKS } from "@/lib/stages";
 import { useRemote } from "@/lib/useRemote";
 import { QuestionFlow } from "../solve/QuestionFlow";
-import { DoneView } from "./DoneView";
+import { DoneView, type RecordGain } from "./DoneView";
 import { GraduateView } from "./GraduateView";
 import { RelearnSession, type RelearnItem } from "./RelearnSession";
 import { TeachStep } from "./TeachStep";
@@ -30,9 +31,11 @@ export function CheckSession() {
   /** 오늘 확인에서 틀린 개념. 확인을 다 마친 뒤 다른 문제로 다시 배운다 (ADR-021) */
   const [relearn, setRelearn] = useState<RelearnItem[]>([]);
   const [relearned, setRelearned] = useState(false);
+  /** 오늘 확인으로 늘어난 기억 기록. 마친 화면에서 보여준다 */
+  const [gains, setGains] = useState<RecordGain[]>([]);
 
   if (load.status === "loading") {
-    return <main className="app-frame" aria-busy="true" />;
+    return <SessionSkeleton />;
   }
   if (load.status === "error") {
     return <LoadError what="문제를" message={load.message} onRetry={retry} />;
@@ -56,6 +59,7 @@ export function CheckSession() {
         total={checks.length}
         correct={results.filter((r) => r.correct).length}
         relearned={relearn.length}
+        gains={gains}
       />
     );
   }
@@ -101,14 +105,14 @@ export function CheckSession() {
     <QuestionFlow
       key={check.question.questionVersionId}
       question={check.question}
-      context={`${check.conceptName} · ${isLastCheck ? "21일 뒤 마지막 확인" : "처음과 다른 문제"}`}
+      context={`${check.conceptName}, ${isLastCheck ? "21일 뒤 마지막 확인" : "처음과 다른 문제"}`}
       mode="DELAYED_CHECK"
       topBar={<SessionTopBar title={`${index + 1} / ${checks.length}`} current={index + 1} total={checks.length} />}
       nextLabel={
         graduated
           ? check.teach
-            ? "졸업 확인"
-            : "졸업"
+            ? "가르치듯 설명하기"
+            : "장기 기억으로"
           : index + 1 < checks.length
             ? "다음 문제"
             : wrongNow || relearn.length > 0
@@ -118,6 +122,8 @@ export function CheckSession() {
       nextHint={wrongNow ? "틀린 개념은 오늘 확인을 다 마친 뒤 다른 문제로 다시 배워요." : undefined}
       onAnswered={(result) => {
         setResults((rs) => [...rs, result]);
+        const { record } = result;
+        if (record) setGains((all) => [...all, { conceptName: check.conceptName, ...record }]);
         if (!result.correct) {
           setRelearn((items) => [...items, { conceptId: check.conceptId, conceptName: check.conceptName }]);
         }

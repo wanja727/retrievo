@@ -8,7 +8,7 @@ export const CONFIDENCE_LABEL: Record<Confidence, string> = {
 
 const ORDER: Confidence[] = ["SURE", "UNSURE", "UNKNOWN"];
 
-/** 확신도: 확실 / 애매 / 모름. 밑줄 탭 */
+/** 확신도: 확실 / 애매 / 모름. 옅은 면 위에서 고른 칸만 흰 알약으로 떠오른다 */
 export function ConfidenceTabs({
   value,
   onChange,
@@ -17,7 +17,7 @@ export function ConfidenceTabs({
   onChange: (value: Confidence) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label="확신도" className="grid grid-cols-3 border-b border-line">
+    <div role="radiogroup" aria-label="확신도" className="tile grid grid-cols-3 gap-1 rounded-2xl p-1">
       {ORDER.map((c) => {
         const on = value === c;
         return (
@@ -27,8 +27,8 @@ export function ConfidenceTabs({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(c)}
-            className={`-mb-px h-12 border-b-2 text-[15px] ${
-              on ? "border-ink font-semibold text-ink" : "border-transparent font-medium text-faint"
+            className={`h-11 rounded-xl text-[15px] transition-colors ${
+              on ? "soft-shadow bg-white font-semibold text-accent-ink" : "font-medium text-soft"
             }`}
           >
             {CONFIDENCE_LABEL[c]}

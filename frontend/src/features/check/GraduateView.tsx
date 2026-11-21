@@ -18,7 +18,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * 졸업 (보상 화면, ADR-018): 검은 배경에 골드. 마지막 칸이 차오르고 졸업한 레슨 수가 하나 오른다.
+ * 졸업 (보상 화면, ADR-023): 라벤더가 넓게 번지는 밝은 화면. 마지막 칸이 차오르고 졸업한 레슨 수가 하나 오른다.
  * 움직임을 줄이도록 설정한 사람에게는 끝난 상태를 바로 보여준다.
  */
 export function GraduateView({
@@ -59,23 +59,23 @@ export function GraduateView({
   const filled = done ? TOTAL_CHECKS : TOTAL_CHECKS - 1;
 
   return (
-    <main className="app-frame bg-ink text-white">
+    <main className="app-frame celebrate">
       <header className="grid h-14 shrink-0 grid-cols-[44px_1fr_44px] items-center px-3">
-        <Link href="/" aria-label="닫기" className="flex size-11 items-center justify-center text-soft">
+        <Link href="/" aria-label="닫기" className="flex size-11 items-center justify-center text-muted">
           <CloseIcon />
         </Link>
       </header>
 
       <section className="px-6 pt-16" aria-live="polite">
-        <div className={`flex items-center gap-2 text-[13px] transition-colors duration-500 ${done ? "text-gold" : "text-soft"}`}>
+        <div className={`flex items-center gap-2 text-[13px] transition-colors duration-500 ${done ? "font-semibold text-accent-ink" : "text-muted"}`}>
           <span
-            className={`size-1.5 rounded-full transition-colors duration-500 ${done ? "bg-gold" : "bg-[#5C5C5C]"}`}
+            className={`size-1.5 rounded-full transition-colors duration-500 ${done ? "bg-accent" : "bg-faint"}`}
             aria-hidden="true"
           />
-          {done ? "졸업" : "마지막 확인 통과"}
+          {done ? "장기 기억" : "마지막 확인 통과"}
         </div>
         <h1 className="mt-3 text-[40px] leading-[1.15] font-semibold tracking-[-1.5px] break-keep">{conceptName}</h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-faint">
+        <p className="mt-4 text-[15px] leading-relaxed text-muted">
           {done ? "21일에 걸쳐 네 번 모두 꺼냈어요. 이제 복습에서 빼요." : "네 번째 확인을 맞혔어요."}
         </p>
       </section>
@@ -87,26 +87,26 @@ export function GraduateView({
       >
         {STEP_LABELS.map((label, i) => (
           <div key={label}>
-            <div className="h-1 overflow-hidden rounded-full bg-[#2A2A2A]">
+            <div className="h-2 overflow-hidden rounded-full bg-line-strong">
               <div
-                className={`h-full rounded-full bg-gold transition-[width] duration-700 ease-out motion-reduce:transition-none ${
+                className={`bar-fill h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
                   i < filled ? "w-full" : "w-0"
                 }`}
               />
             </div>
-            <div className={`mt-2 text-[11px] ${i < filled ? "text-[#D4D4D4]" : "text-[#6B6B6B]"}`}>{label}</div>
+            <div className={`mt-2 text-[11px] ${i < filled ? "font-medium text-ink" : "text-soft"}`}>{label}</div>
           </div>
         ))}
       </div>
 
       {counts && shownGraduated !== null && (
-        <section className="mx-6 mt-12 border-t border-[#262626] pt-6" aria-label="졸업한 레슨">
-          <div className="text-[13px] text-soft">졸업한 레슨</div>
+        <section className="card mx-4 mt-10 px-5 py-5" aria-label="장기 기억이 된 레슨">
+          <div className="text-[13px] text-muted">장기 기억이 된 레슨</div>
           <div className="mt-1.5 flex items-baseline gap-2">
-            <span className={`text-4xl font-semibold tracking-[-1.5px] transition-colors duration-500 ${done ? "text-white" : "text-soft"}`}>
+            <span className={`text-[40px] font-semibold tracking-[-1.5px] transition-colors duration-500 ${done ? "text-accent-ink" : "text-soft"}`}>
               {shownGraduated}
             </span>
-            <span className="text-[15px] text-[#6B6B6B]">/ {counts.total}</span>
+            <span className="text-[15px] text-soft">/ {counts.total}</span>
           </div>
           <div
             className="mt-3 grid gap-[3px]"
@@ -116,25 +116,25 @@ export function GraduateView({
             {Array.from({ length: counts.total }, (_, i) => (
               <span
                 key={i}
-                className={`h-1 rounded-full transition-colors duration-500 ${i < shownGraduated ? "bg-gold" : "bg-[#2A2A2A]"}`}
+                className={`h-1.5 rounded-full transition-colors duration-500 ${i < shownGraduated ? "bar-fill" : "bg-line-strong"}`}
               />
             ))}
           </div>
           {!counts.lessonGraduated && (
-            <p className="mt-3 text-xs leading-relaxed text-[#6B6B6B]">
-              이 레슨에는 아직 졸업하지 않은 개념이 남아 있어요.
+            <p className="mt-3 text-[13px] leading-relaxed text-soft">
+              이 레슨에는 아직 장기 기억이 되지 않은 개념이 남아 있어요.
             </p>
           )}
         </section>
       )}
 
-      <div className="sticky bottom-0 mt-auto bg-ink px-6 pt-3 pb-6">
+      <div className="bottom-bar sticky bottom-0 mt-auto px-6 pt-4 pb-6">
         <button
           type="button"
           onClick={onNext}
           disabled={!done}
-          className={`flex h-14 w-full items-center justify-center rounded-full text-base font-semibold transition-colors duration-500 ${
-            done ? "bg-white text-ink" : "bg-[#1F1F1F] text-soft"
+          className={`flex h-14 w-full items-center justify-center rounded-full text-[17px] font-semibold transition-colors duration-500 ${
+            done ? "btn-primary text-white" : "bg-line-strong text-soft"
           }`}
         >
           {nextLabel}

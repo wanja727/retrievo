@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionSkeleton } from "@/components/ui/SessionSkeleton";
 import { useCallback, useState } from "react";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
@@ -66,7 +67,7 @@ function RelearnQuestion({
   const [correct, setCorrect] = useState<boolean | null>(null);
 
   if (load.status === "loading") {
-    return <main className="app-frame" aria-busy="true" />;
+    return <SessionSkeleton />;
   }
   if (load.status === "error") {
     return <LoadError what="문제를" message={load.message} onRetry={retry} />;
@@ -76,7 +77,7 @@ function RelearnQuestion({
   return (
     <QuestionFlow
       question={load.data}
-      context={`${item.conceptName} · 틀린 개념 다시 배우기`}
+      context={`${item.conceptName}, 틀린 개념 다시 배우기`}
       mode="PRACTICE"
       topBar={<SessionTopBar title={`다시 배우기 ${solved} / ${total}`} current={solved} total={total} />}
       nextLabel={finishing ? "마치기" : correct === false && onlyOneLeft ? "다른 문제로 다시" : "다음"}

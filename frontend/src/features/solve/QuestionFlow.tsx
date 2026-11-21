@@ -89,12 +89,12 @@ export function QuestionFlow({
           onConfidence={setConfidence}
         />
         <BottomActions>
-          {submitError && <p className="pb-2 text-center text-xs text-wrong">{submitError}</p>}
+          {submitError && <p className="pb-2 text-center text-[13px] text-wrong">{submitError}</p>}
           <PrimaryButton onClick={submit} disabled={!selected || !confidence || submitting}>
             {submitting ? "채점하는 중" : "제출"}
           </PrimaryButton>
           {(!selected || !confidence) && (
-            <p className="pt-2 text-center text-xs text-soft">답과 확신도를 고르면 제출할 수 있어요</p>
+            <p className="pt-2 text-center text-[13px] text-soft">답과 확신도를 고르면 제출할 수 있어요</p>
           )}
         </BottomActions>
       </main>
@@ -114,7 +114,7 @@ export function QuestionFlow({
         >
           {nextLabel}
         </PrimaryButton>
-        {nextHint && <p className="pt-2 text-center text-xs text-soft">{nextHint}</p>}
+        {nextHint && <p className="pt-2 text-center text-[13px] text-soft">{nextHint}</p>}
       </BottomActions>
     </main>
   );
