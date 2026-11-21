@@ -50,10 +50,11 @@ public class DelayedCheckController {
 
     /**
      * 풀어 본 개념의 진행 상태. stage: 통과한 확인 수(0 = 배우는 중, 4 = 졸업). dueDate: 다음 확인 날.
-     * 레슨별 이해도와 졸업 화면이 쓴다
+     * bestStage: 지금까지 도달한 가장 높은 단계. 틀려서 stage가 내려가도 줄지 않는다. 화면은 이 값을 기억 기록으로 보여준다 (ADR-025)
      */
     public record ConceptStatus(long conceptId, String conceptName, long lessonId, String lessonTitle, int stage,
-            boolean graduated, LocalDate learnedOn, LocalDate dueDate, boolean sureWrong, Instant graduatedAt) {
+            boolean graduated, LocalDate learnedOn, LocalDate dueDate, boolean sureWrong, Instant graduatedAt,
+            int bestStage) {
     }
 
     @GetMapping("/api/me/concepts")
@@ -61,7 +62,7 @@ public class DelayedCheckController {
         return progresses.all(userId).stream()
                 .map(p -> new ConceptStatus(p.conceptId(), p.conceptName(), p.lessonId(), p.lessonTitle(),
                         p.stage(), p.stage() == ReviewSchedule.GRADUATED, p.learnedOn(), p.dueDate(),
-                        p.sureWrong(), p.graduatedAt()))
+                        p.sureWrong(), p.graduatedAt(), p.bestStage()))
                 .toList();
     }
 

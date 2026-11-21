@@ -17,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
  * 답안 제출 (가장 중요한 쓰기 경로). 한 트랜잭션 안에서 채점 → 제출 기록 → 개념 진행 상태 갱신.
  * 레슨 답은 배운 날 기준(판정 문제 모두 정답)을 세고, 지연 확인 답은 단계를 올리거나 내린다. 연습 답은 기록만 한다
  * (ADR-017, ADR-021, {@link ReviewSchedule}).
- * XP·스트릭은 2주차에 이 트랜잭션에 더한다.
+ * 기억 기록(가장 높이 도달한 단계)이 늘었으면 결과에 함께 준다 (ADR-025). 연속 학습은 저장하지 않고 답을 낸 날에서 센다.
  */
 @Service
 class SubmissionService {
@@ -40,7 +40,7 @@ class SubmissionService {
         Optional<AnswerSubmission> existing =
                 submissions.findByUserIdAndClientSubmissionId(userId, request.clientSubmissionId());
         if (existing.isPresent()) {
-            return toResult(existing.get());
+            return toResult(existing.get(), userId);
         }
 
         GradableQuestion question = catalog.findGradable(request.questionVersionId())
@@ -64,6 +64,7 @@ class SubmissionService {
                 userId, question.versionId(), request.clientSubmissionId(), selected,
                 request.confidence(), correct, delayedCheck, firstAttempt, today, now));
 
+        int bestBefore = progresses.bestStage(userId, question.conceptId());
         if (mode == SubmissionMode.PRACTICE) {
             // 연습은 기록만 한다. 배운 적 없는 개념은 연습할 수 없다 (레슨에서 배운다)
             if (!progresses.learned(userId, question.conceptId())) {
@@ -80,20 +81,26 @@ class SubmissionService {
             progresses.recordLessonAnswer(userId, question.conceptId(), correct, today, now);
         }
 
-        return toResult(submission, question);
+        int bestAfter = progresses.bestStage(userId, question.conceptId());
+        SubmissionResult.RecordUp record =
+                bestAfter > bestBefore ? new SubmissionResult.RecordUp(bestBefore, bestAfter) : null;
+        return toResult(submission, question, record, progresses.retrievals(userId));
     }
 
     @Transactional(readOnly = true)
     public Optional<SubmissionResult> findExisting(long userId, UUID clientSubmissionId) {
-        return submissions.findByUserIdAndClientSubmissionId(userId, clientSubmissionId).map(this::toResult);
+        return submissions.findByUserIdAndClientSubmissionId(userId, clientSubmissionId)
+                .map(s -> toResult(s, userId));
     }
 
-    private SubmissionResult toResult(AnswerSubmission submission) {
+    /** 이미 기록된 제출의 결과. 기억 기록이 는 것은 처음 한 번뿐이라 record는 null이다 */
+    private SubmissionResult toResult(AnswerSubmission submission, long userId) {
         GradableQuestion question = catalog.findAnswered(submission.getQuestionVersionId()).orElseThrow();
-        return toResult(submission, question);
+        return toResult(submission, question, null, progresses.retrievals(userId));
     }
 
-    private static SubmissionResult toResult(AnswerSubmission submission, GradableQuestion question) {
+    private static SubmissionResult toResult(AnswerSubmission submission, GradableQuestion question,
+            SubmissionResult.RecordUp record, int retrievals) {
         return new SubmissionResult(
                 submission.getId(),
                 submission.isCorrect(),
@@ -102,6 +109,8 @@ class SubmissionService {
                 submission.getConfidence(),
                 question.explanation(),
                 question.sourceUrl(),
-                submission.isDelayedCheck());
+                submission.isDelayedCheck(),
+                record,
+                retrievals);
     }
 }
