@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BottomNav } from "@/components/ui/BottomNav";
-import { ArrowRightIcon, CheckIcon } from "@/components/ui/icons";
+import { ArrowRightIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
-import { StageBar } from "@/components/ui/StageBar";
+import { RecordChip } from "@/components/ui/Record";
 import { api } from "@/lib/api";
 import {
   byNextCheck,
@@ -24,8 +24,9 @@ const fetchLessons = async () => {
 };
 
 /**
- * 레슨별 진행 상태 (20장 "레슨별 이해도").
- * 관리 중인 레슨을 다음 확인이 가까운 순으로 보여주고, 졸업한 레슨은 복습에서 뺐다고 알린다.
+ * 레슨 목록. 레슨마다 기억 기록(학습 완료, 3일·7일 뒤에도 기억, 장기 기억)을 보여준다. 가장 길게 기억한 기록이라 줄지 않는다.
+ * 지금 몇 번째 확인인지는 시스템이 관리할 일이라 보여주지 않는다.
+ * 기억하는 중인 레슨을 다음 확인이 가까운 순으로 보여주고, 21일 뒤에도 기억한 레슨은 복습에서 뺐다고 알린다.
  */
 export function LessonsScreen() {
   const [state, retry] = useRemote(fetchLessons);
@@ -48,55 +49,45 @@ export function LessonsScreen() {
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
-          aria-label="막대의 뜻"
-          className="ml-auto inline-flex size-5 items-center justify-center rounded-full border border-[#C9C9C9] text-[11px] font-semibold text-muted"
+          aria-label="숫자의 뜻"
+          className="ml-auto inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent-ink"
         >
           ?
         </button>
       </header>
 
       {state.status === "loading" ? (
-        <div className="px-6 pt-1" aria-busy="true" aria-label="불러오는 중">
-          <div className="h-9 w-40 rounded bg-surface" />
-          <div className="mt-4 h-1.5 rounded bg-surface" />
+        <div className="hero mx-4 mt-1 px-6 py-6" aria-busy="true" aria-label="불러오는 중">
+          <div className="h-10 w-40 rounded bg-white/70" />
+          <div className="mt-4 h-2 rounded bg-white/70" />
         </div>
       ) : (
-        <Summary total={all.length} graduated={graduated.length} managed={managed.length} fresh={fresh.length} />
+        <Summary all={all} graduated={graduated.length} fresh={fresh.length} />
       )}
 
       {managed.length > 0 && (
-        <section className="mx-6 mt-[18px]" aria-labelledby="managed-title">
-          <SectionLabel id="managed-title">관리 중 {managed.length} · 다음 확인이 가까운 순</SectionLabel>
+        <section className="mx-4 mt-6 flex flex-col gap-2" aria-labelledby="managed-title">
+          <SectionLabel id="managed-title" note="다음 확인이 가까운 순">
+            기억하는 중 {managed.length}
+          </SectionLabel>
           {managed.map((p) => (
             <ManagedRow key={p.lesson.id} progress={p} today={today} />
           ))}
         </section>
       )}
 
-      {graduated.length > 0 && (
-        <section className="mx-6 mt-3 rounded-[14px] bg-surface px-4 py-3" aria-label="졸업한 레슨">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <CheckIcon size={16} />
-            졸업 {graduated.length} · 복습에서 뺐어요
-          </div>
-          <div className="mt-1 text-xs leading-relaxed text-muted">
-            {graduated.map((p) => p.lesson.title).join(" · ")}
-          </div>
-        </section>
-      )}
-
       {fresh.length > 0 && (
-        <section className="mx-6 mt-[18px] pb-6" aria-labelledby="fresh-title">
+        <section className="mx-4 mt-6 flex flex-col gap-2" aria-labelledby="fresh-title">
           <SectionLabel id="fresh-title">시작 전 {fresh.length}</SectionLabel>
           {fresh.map((p) => (
             <Link
               key={p.lesson.id}
               href={`/lessons/${p.lesson.id}`}
-              className="flex h-14 items-center gap-3 border-b border-line"
+              className="card flex h-[62px] items-center gap-3 px-4"
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-medium tracking-[-0.2px]">{p.lesson.title}</div>
-                <div className="mt-0.5 text-xs text-soft">{p.lesson.unit}</div>
+                <div className="mt-0.5 text-[13px] text-soft">{p.lesson.unit}</div>
               </div>
               <ArrowRightIcon size={16} className="text-faint" />
             </Link>
@@ -104,87 +95,106 @@ export function LessonsScreen() {
         </section>
       )}
 
-      <div className="mt-auto" />
+      {graduated.length > 0 && (
+        <section className="mx-4 mt-6 flex flex-col gap-2" aria-labelledby="graduated-title">
+          <SectionLabel id="graduated-title" note="복습에서 뺐어요">
+            장기 기억 {graduated.length}
+          </SectionLabel>
+          {graduated.map((p) => (
+            <Link
+              key={p.lesson.id}
+              href={`/lessons/${p.lesson.id}`}
+              className="card flex h-[62px] items-center gap-3 px-4"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-medium tracking-[-0.2px]">{p.lesson.title}</div>
+                <div className="mt-0.5 text-[13px] text-soft">{p.lesson.unit}</div>
+              </div>
+              <RecordChip best={p.best} />
+            </Link>
+          ))}
+        </section>
+      )}
+
+      <div className="mt-auto pt-6" />
       <BottomNav active="레슨" />
 
-      {helpOpen && <FirstRunSheet title="숫자와 막대의 뜻" onClose={() => setHelpOpen(false)} />}
+      {helpOpen && <FirstRunSheet title="숫자의 뜻" onClose={() => setHelpOpen(false)} />}
     </main>
   );
 }
 
-function SectionLabel({ id, children }: { id: string; children: React.ReactNode }) {
+function SectionLabel({ id, children, note }: { id: string; children: React.ReactNode; note?: string }) {
   return (
-    <h2 id={id} className="border-b border-line pb-2.5 text-xs font-medium text-soft">
-      {children}
-    </h2>
+    <div className="flex items-baseline justify-between px-2 pb-0.5">
+      <h2 id={id} className="text-[13px] font-semibold text-sub">
+        {children}
+      </h2>
+      {note && <span className="text-[13px] text-soft">{note}</span>}
+    </div>
   );
 }
 
-/** 졸업 수와 레슨 전체를 한 줄 막대로. 한 칸이 레슨 하나 */
-function Summary({
-  total,
-  graduated,
-  managed,
-  fresh,
-}: {
-  total: number;
-  graduated: number;
-  managed: number;
-  fresh: number;
-}) {
-  const cells = [
-    ...Array<string>(graduated).fill("bg-gold"),
-    ...Array<string>(managed).fill("bg-faint"),
-    ...Array<string>(fresh).fill("bg-line-strong"),
-  ];
+/** 배운 레슨 수와 비율 막대. 레슨이 몇 개로 늘어도 모양이 같도록, 레슨마다 한 칸이 아니라 세 구간의 비율로 그린다 */
+function Summary({ all, graduated, fresh }: { all: LessonProgress[]; graduated: number; fresh: number }) {
+  const learned = all.filter((p) => p.best >= 1).length;
   return (
-    <section className="px-6 pt-1" aria-label="레슨 진행">
-      <div className="flex items-baseline gap-2">
-        <span className="text-4xl leading-none font-semibold tracking-[-1.5px]">{graduated}</span>
-        <span className="text-[15px] text-muted">/ {total} 레슨 졸업</span>
+    <section className="hero mx-4 mt-1 px-6 pt-5 pb-6" aria-labelledby="summary-title">
+      <h2 id="summary-title" className="text-[13px] text-muted">
+        배운 레슨
+      </h2>
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <span className="text-[56px] leading-none font-semibold tracking-[-2.5px]">{learned}</span>
+        <span className="text-[22px] font-medium text-soft">/ {all.length}</span>
       </div>
       <div
         role="img"
-        aria-label={`${total}개 레슨: 졸업 ${graduated}, 관리 중 ${managed}, 시작 전 ${fresh}`}
-        className="mt-3.5 grid gap-[3px]"
-        style={{ gridTemplateColumns: `repeat(${Math.max(total, 1)}, minmax(0, 1fr))` }}
+        aria-label={`레슨 ${all.length}개 가운데 ${learned}개를 배웠고 ${graduated}개는 장기 기억`}
+        className="mt-4 flex h-2 gap-[3px]"
       >
-        {cells.map((cls, i) => (
-          <span key={i} className={`h-1.5 rounded-[3px] ${cls}`} />
-        ))}
+        {[
+          { n: graduated, cls: "bar-fill" },
+          { n: learned - graduated, cls: "bg-accent-line" },
+          { n: fresh, cls: "bg-white" },
+        ]
+          .filter((seg) => seg.n > 0)
+          .map((seg) => (
+            <span key={seg.cls} className={`min-w-2 basis-0 rounded-full ${seg.cls}`} style={{ flexGrow: seg.n }} />
+          ))}
       </div>
-      <div className="mt-2.5 flex gap-4 text-xs text-muted">
-        <Legend dot="bg-gold">졸업 {graduated}</Legend>
-        <Legend dot="bg-faint">관리 중 {managed}</Legend>
-        <Legend dot="bg-line-strong">시작 전 {fresh}</Legend>
+      <div className="mt-3 flex gap-4 text-[13px] text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-accent" aria-hidden="true" />
+          장기 기억 {graduated}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-accent-line" aria-hidden="true" />
+          기억하는 중 {learned - graduated}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-white" aria-hidden="true" />
+          시작 전 {fresh}
+        </span>
       </div>
     </section>
-  );
-}
-
-function Legend({ dot, children }: { dot: string; children: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className={`size-1.5 rounded-full ${dot}`} aria-hidden="true" />
-      {children}
-    </span>
   );
 }
 
 function ManagedRow({ progress: p, today }: { progress: LessonProgress; today: string }) {
   const due = today !== "" && isDueToday(p, today);
   return (
-    <Link href={`/lessons/${p.lesson.id}`} className="flex h-16 items-center gap-3 border-b border-line">
+    <Link href={`/lessons/${p.lesson.id}`} className="card flex min-h-[72px] items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-semibold tracking-[-0.2px]">{p.lesson.title}</div>
-        <div className={`mt-0.5 flex items-center gap-1.5 text-xs ${due ? "text-ink" : "text-soft"}`}>
+        <div className="mt-0.5 flex items-center gap-2 text-[13px] text-soft">
+          <span className="shrink-0">{p.lesson.unit}</span>
           {p.sureWrong && <span className="size-1.5 shrink-0 rounded-full bg-wrong" aria-hidden="true" />}
-          <span className="truncate">
-            {p.lesson.unit} · {today === "" ? " " : nextCheckLabel(p, today)}
+          <span className={`truncate ${due ? "font-medium text-accent-ink" : ""}`}>
+            {today === "" ? " " : nextCheckLabel(p, today)}
           </span>
         </div>
       </div>
-      <StageBar passed={p.passed} />
+      <RecordChip best={p.best} />
     </Link>
   );
 }

@@ -17,7 +17,7 @@ export function ChooseStep({
   onConfidence,
 }: {
   question: QuestionView;
-  /** 질문 위에 작게 보이는 맥락. 예: "JPA · N+1 문제 · 틀렸던 문제 다시" */
+  /** 질문 위에 작게 보이는 맥락. 예: "JPA N+1 문제, 틀렸던 문제 다시" */
   context: string;
   selected: string | null;
   confidence: Confidence | null;
@@ -27,7 +27,7 @@ export function ChooseStep({
   return (
     <div className="pb-4">
       <div className="px-6 pt-8 text-[13px] text-muted">{context}</div>
-      <h1 className="mx-6 mt-2.5 text-[19px] leading-normal font-semibold tracking-[-0.4px]">{q.body}</h1>
+      <h1 className="mx-6 mt-2.5 text-[17px] leading-normal font-semibold tracking-[-0.4px]">{q.body}</h1>
 
       {q.type === "LINE_PICK" && q.code ? (
         <LinePick code={q.code} selected={selected} onSelect={onSelect} />
@@ -78,11 +78,11 @@ function Choices({
             role="radio"
             aria-checked={on}
             onClick={() => onSelect(value)}
-            className={`flex min-h-[58px] w-full items-center gap-3.5 rounded-[14px] border px-4 py-3 text-left text-base ${
-              on ? "border-ink bg-ink font-semibold text-white" : "border-line-strong bg-white font-medium"
+            className={`flex min-h-[58px] w-full items-center gap-3.5 rounded-2xl border px-4 py-3 text-left text-[15px] ${
+              on ? "border-accent bg-accent/15 font-semibold text-accent-ink" : "tile font-medium"
             }`}
           >
-            <span className={`w-3.5 text-xs font-semibold ${on ? "text-soft" : "text-faint"}`}>{LETTERS[i]}</span>
+            <span className={`w-3.5 text-[13px] font-semibold ${on ? "text-accent" : "text-faint"}`}>{LETTERS[i]}</span>
             <span className="flex-1">{choice}</span>
             {on && <CheckIcon size={18} />}
           </button>
@@ -106,7 +106,7 @@ function OxChoice({ selected, onSelect }: { selected: string | null; onSelect: (
             aria-label={value === "O" ? "O, 맞다" : "X, 틀리다"}
             onClick={() => onSelect(value)}
             className={`h-28 rounded-2xl border text-5xl font-semibold ${
-              on ? "border-ink bg-ink text-white" : "border-line-strong bg-white"
+              on ? "border-accent bg-accent/15 text-accent-ink" : "tile"
             }`}
           >
             {value}
@@ -138,8 +138,8 @@ function LinePick({
   return (
     <div className="mx-6 mt-5">
       <CodeBlock code={code} marks={marks} onPickLine={toggle} />
-      <div className="mt-2.5 flex justify-between text-xs text-muted">
-        <span>줄을 눌러서 골라요 · 여러 줄도 돼요</span>
+      <div className="mt-2.5 flex justify-between text-[13px] text-muted">
+        <span>줄을 눌러서 골라요. 여러 줄도 돼요</span>
         {picked.length > 0 && (
           <span>
             <b className="text-ink">{picked.join(", ")}번째 줄</b> 선택됨

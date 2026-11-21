@@ -1,35 +1,44 @@
 @import "tailwindcss";
 
 /*
- * Retrievo 디자인 토큰 (노션 ADR-018)
- * - 흰 바탕에 검은 글자가 기본. 카드와 그림자 대신 얇은 선과 여백
- * - 골드는 "꺼내기에 성공했다"는 뜻으로만 쓴다 (통과한 확인, 졸업, 성장, 직접 체크한 항목)
- * - 빨강은 틀림 관련 표시의 작은 점으로만 쓴다
+ * Retrievo 디자인 토큰 (노션 ADR-023). 레슨 사이트(dev-lessons)의 "soft pastel" 테마와 같은 색이다
+ * 컨셉: 깔끔한 흰 바탕에 파스텔과 옅은 그라데이션
+ * - 글자와 회색은 보랏빛이 도는 짙은 회색
+ * - 라벤더(accent)는 테마 색: 누를 수 있는 것, 고른 것, 진행과 통과한 확인, 장기 기억
+ * - 민트(ok)는 "맞았어요" 판정에만, 산호(wrong)는 틀림에만 쓴다
+ * - 흰 바탕에 가는 선. 묶음(.card)은 선으로만 나누고, 대표 숫자 면(.hero)만 옅은 라벤더다. 그림자와 번짐은 없다
  */
 @theme {
-  --color-ink: #0a0a0a;
-  --color-ink-2: #262626;
-  --color-sub: #525252;
-  --color-muted: #737373;
-  --color-soft: #8a8a8a;
-  --color-faint: #a3a3a3;
-  --color-line: #ededed;
-  --color-line-strong: #e5e5e5;
-  --color-surface: #f7f7f7;
-  --color-gold: #f2a20c;
-  --color-wrong: #e5484d;
-  --color-code: #0b0b0c;
+  --color-ink: #3b3944;
+  --color-ink-2: #4a4856;
+  --color-sub: #5f5d6b;
+  --color-muted: #807e8c;
+  --color-soft: #8f8c9b;
+  --color-faint: #a9a7b6;
+  --color-line: #ebeaf1;
+  --color-line-strong: #e2e0ea;
+  --color-surface: #f7f6fb;
+  --color-accent: #8477e6;
+  --color-accent-ink: #6c5fd3;
+  --color-accent-soft: #f5f2ff;
+  --color-accent-line: #cfc6fb;
+  --color-ok: #3bb98c;
+  --color-ok-ink: #1f8a63;
+  --color-ok-soft: #e3f7ec;
+  --color-wrong: #e86f5e;
+  --color-wrong-ink: #c9513f;
+  --color-wrong-soft: #fff1ee;
+  --color-code: #f7f6fb;
 
   --font-sans: var(--font-inter-tight), var(--font-noto-sans-kr), sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 html {
-  background: var(--color-ink);
+  background: #f1eff8;
 }
 
 body {
-  background: #ffffff;
   color: var(--color-ink);
   word-break: keep-all;
   -webkit-tap-highlight-color: transparent;
@@ -44,10 +53,62 @@ body {
   position: relative;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff;
+}
+
+/* 다 마친 화면, 장기 기억 화면, 로그인: 위쪽에만 라벤더가 옅게 깔린다 */
+.app-frame.celebrate {
+  background-image: linear-gradient(180deg, var(--color-accent-soft) 0%, #ffffff 46%);
+}
+
+/* 아래 모양들은 components 층에 둔다. 같은 요소에 준 Tailwind 유틸리티가 이긴다 */
+@layer components {
+  /*
+   * 흰 바탕에 가는 선. 그림자, 번짐, 반투명은 쓰지 않는다
+   * tile은 작은 면(보기, 칩), card는 묶음, hero는 화면의 대표 숫자를 담는 옅은 라벤더 면
+   */
+  .tile {
+    background: #ffffff;
+    border: 1px solid var(--color-line-strong);
+  }
+  .card {
+    background: #ffffff;
+    border: 1px solid var(--color-line);
+    border-radius: 20px;
+  }
+  .hero {
+    border-radius: 28px;
+    background: var(--color-accent-soft);
+  }
+  /* 화면 아래에 붙는 메뉴와 버튼 영역: 흰 면에 위쪽 선 하나 */
+  .bottom-bar {
+    background: #ffffff;
+    border-top: 1px solid var(--color-line);
+  }
+  /* 주 버튼: 테마 색 한 가지 */
+  .btn-primary {
+    background: var(--color-accent);
+  }
+  .btn-primary:active {
+    background: var(--color-accent-ink);
+  }
+  /* 채워진 막대 */
+  .bar-fill {
+    background: var(--color-accent);
+  }
+  /* 누를 수 있는 묶음과 보기는 누르는 동안 옅은 회색이 된다: 눌렸다는 것을 바로 알린다 */
+  a.card:active,
+  button.card:active,
+  button.tile:active {
+    background: var(--color-surface);
+  }
+  .soft-shadow {
+    box-shadow: 0 1px 2px rgb(59 57 68 / 0.1);
+  }
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-gold);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 

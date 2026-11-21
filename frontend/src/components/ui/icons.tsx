@@ -37,8 +37,8 @@ export function ArrowRightIcon(props: IconProps) {
 
 export function CheckIcon(props: IconProps) {
   return (
-    <svg {...base({ size: 16, strokeWidth: 2, ...props })}>
-      <path d="M5 12l5 5 9-10" />
+    <svg {...base({ size: 16, strokeWidth: 2.6, ...props })}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
     </svg>
   );
 }
@@ -58,6 +58,17 @@ export function MicIcon(props: IconProps) {
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0" />
       <path d="M12 18v3" />
+    </svg>
+  );
+}
+
+/** 새 탭에서 열기 */
+export function ExternalIcon(props: IconProps) {
+  return (
+    <svg {...base({ size: 18, ...props })}>
+      <path d="M14 5h5v5" />
+      <path d="M19 5l-8 8" />
+      <path d="M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" />
     </svg>
   );
 }

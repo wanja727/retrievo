@@ -4,8 +4,8 @@
  * - TodayCheck, ConceptStatus: learning/DelayedCheckController
  * - LessonSummary, LessonDetail: content/LessonQueryService
  * - Report: learning/ReportController.Report
+ * - Home: learning/HomeController.Home. bestStage·record·retrievals와 함께 쌓이기만 하는 성장 값이다. 뜻은 lib/memory.ts (ADR-025)
  * - Me: auth/MeController.Me
- * - LessonSteps: content/file/LessonSteps (콘텐츠 파일의 steps를 그대로 준다)
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
 
@@ -62,6 +62,8 @@ export interface ConceptStatus {
   dueDate: string | null;
   sureWrong: boolean;
   graduatedAt: string | null;
+  /** 지금까지 도달한 가장 높은 단계(0~4). 틀려서 stage가 내려가도 이 값은 줄지 않는다 */
+  bestStage: number;
 }
 
 export interface LessonSummary {
@@ -73,44 +75,8 @@ export interface LessonSummary {
   questionCount: number;
 }
 
-/** 레슨 하나. steps가 null이면 본문이 아직 앱에 없다 (레슨 사이트로 연결한다) */
-export interface LessonDetail extends LessonSummary {
-  steps: LessonSteps | null;
-}
-
-/**
- * 레슨 본문 7단계: 예측 → 배경 → 실습 → 함정 → 해결 → 확인 → 면접 답변.
- * 확인 단계는 레슨의 판정 문제를 푼다. text는 빈 줄로 문단, **굵게**, `코드`만 쓴다.
- * 여기 정답은 본문 안의 연습이라 판정에 쓰지 않는다.
- */
-export interface LessonSteps {
-  predict: { question: string; text: string | null; code: string | null; choices: string[]; answer: number };
-  background: ExplainStep;
-  practice: {
-    title: string;
-    text: string;
-    code: string | null;
-    runs: { call: string; note: string | null; choices: string[]; answer: number; output: string }[];
-    after: string | null;
-  };
-  pitfall: ExplainStep;
-  fix: ExplainStep;
-  interview: { question: string; points: { label: string; text: string }[] };
-}
-
-export interface ExplainStep {
-  title: string;
-  text: string;
-  code: string | null;
-  codeNote: string | null;
-  /** 번호 붙은 단계 목록 (도식 대신) */
-  flow: string[] | null;
-  /** 다른 방법과 주의할 점 */
-  alternatives: { title: string; note: string }[] | null;
-  /** 다음 단계를 여는 장치. 둘 중 하나만 있다 */
-  quiz: { question: string; choices: string[]; answer: number } | null;
-  recall: { prompt: string; answer: string } | null;
-}
+/** 레슨 하나. 본문은 레슨 사이트(dev-lessons)에 있고 앱은 그 페이지를 안에 띄운다. 서버가 주는 steps는 쓰지 않는다 */
+export type LessonDetail = LessonSummary;
 
 /** "나" 화면의 프로필. joinedOn은 가입한 서비스 날짜, days는 가입한 날을 1일째로 센 오늘 */
 export interface Me {
@@ -143,6 +109,25 @@ export interface Report {
   activity: { date: string; count: number }[];
 }
 
+/** 오늘 화면. 오늘 확인의 진행과, 쌓이기만 하는 값들 */
+export interface Home {
+  today: string;
+  /** 오늘 끝낸 확인 수 */
+  checksDone: number;
+  /** 오늘 확인 전체: 끝낸 것과 남은 것 */
+  checksTotal: number;
+  /** 답을 낸 날이 이어진 일수. 오늘 아직 답을 내지 않았으면 어제까지 센 값 */
+  streak: number;
+  /** 이번 주(월~일) 가운데 답을 낸 날 */
+  activeDates: string[];
+  /** 배움을 마친 개념 수 (bestStage 1 이상) */
+  learned: number;
+  /** 21일 뒤에도 기억한 개념 수 */
+  longTerm: number;
+  /** 지금까지 낸 답 수 */
+  retrievals: number;
+}
+
 export interface SubmitRequest {
   /** 화면이 문제마다 만드는 UUID. 같은 값으로 다시 보내면 처음 결과를 돌려받는다 */
   clientSubmissionId: string;
@@ -163,6 +148,10 @@ export interface SubmissionResult {
   explanation: string;
   sourceUrl: string | null;
   delayedCheck: boolean;
+  /** 이 답으로 기억 기록(bestStage)이 늘었으면 전과 후. 늘지 않았으면 null */
+  record: { before: number; after: number } | null;
+  /** 지금까지 낸 답 수. 이 답을 포함한다 */
+  retrievals: number;
 }
 
 export interface RetrievoApi {
@@ -176,6 +165,8 @@ export interface RetrievoApi {
   /** 연습할 문제 하나. 배운 개념만. 아직 안 푼 문제나 가장 오래전에 푼 문제라 방금 틀린 문제와 다르다 (ADR-021) */
   practiceQuestion(conceptId: number): Promise<QuestionView>;
   report(): Promise<Report>;
+  /** 오늘 화면의 진행과 쌓인 값 */
+  home(): Promise<Home>;
   me(): Promise<Me>;
   logout(): Promise<void>;
   submit(request: SubmitRequest): Promise<SubmissionResult>;

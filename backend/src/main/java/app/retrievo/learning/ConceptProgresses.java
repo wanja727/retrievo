@@ -26,8 +26,8 @@ class ConceptProgresses {
             boolean sureWrong) {
     }
 
-    /** 개념 하나의 진행 상태 (레슨·기록 화면용) */
-    record Progress(long conceptId, String conceptName, long lessonId, String lessonTitle, int stage,
+    /** 개념 하나의 진행 상태 (레슨·기록 화면용). bestStage는 지금까지 도달한 가장 높은 단계 (ADR-025) */
+    record Progress(long conceptId, String conceptName, long lessonId, String lessonTitle, int stage, int bestStage,
             LocalDate learnedOn, LocalDate dueDate, boolean sureWrong, Instant graduatedAt) {
     }
 
@@ -73,10 +73,11 @@ class ConceptProgresses {
             ReviewSchedule.Next next = ReviewSchedule.learned(today);
             jdbc.sql("""
                             update concept_progress
-                            set stage = ?, learned_on = ?, due_date = ?, sure_wrong = false, updated_at = ?
+                            set stage = ?, best_stage = greatest(best_stage, ?), learned_on = ?, due_date = ?,
+                                sure_wrong = false, updated_at = ?
                             where user_id = ? and concept_id = ?
                             """)
-                    .params(next.stage(), today, next.dueDate(), Timestamp.from(now), userId, conceptId)
+                    .params(next.stage(), next.stage(), today, next.dueDate(), Timestamp.from(now), userId, conceptId)
                     .update();
         }
     }
@@ -102,11 +103,12 @@ class ConceptProgresses {
             long questionVersionId, Instant now) {
         jdbc.sql("""
                         update concept_progress
-                        set stage = ?, due_date = ?, sure_wrong = ?, updated_at = ?,
+                        set stage = ?, best_stage = greatest(best_stage, ?), due_date = ?, sure_wrong = ?,
+                            updated_at = ?,
                             graduated_at = case when ? then ? else graduated_at end
                         where user_id = ? and concept_id = ?
                         """)
-                .params(next.stage(), next.dueDate(), next.sureWrong(), Timestamp.from(now),
+                .params(next.stage(), next.stage(), next.dueDate(), next.sureWrong(), Timestamp.from(now),
                         next.graduated(), Timestamp.from(now), userId, conceptId)
                 .update();
         jdbc.sql("""
@@ -139,7 +141,7 @@ class ConceptProgresses {
     List<Progress> all(long userId) {
         return jdbc.sql("""
                         select p.concept_id, c.name, l.id as lesson_id, l.title as lesson_title, p.stage,
-                               p.learned_on, p.due_date, p.sure_wrong, p.graduated_at
+                               p.best_stage, p.learned_on, p.due_date, p.sure_wrong, p.graduated_at
                         from concept_progress p
                         join concept c on c.id = p.concept_id
                         join lesson l on l.id = c.lesson_id
@@ -152,7 +154,7 @@ class ConceptProgresses {
                     Timestamp graduatedAt = rs.getTimestamp("graduated_at");
                     return new Progress(
                             rs.getLong("concept_id"), rs.getString("name"), rs.getLong("lesson_id"),
-                            rs.getString("lesson_title"), rs.getInt("stage"),
+                            rs.getString("lesson_title"), rs.getInt("stage"), rs.getInt("best_stage"),
                             rs.getObject("learned_on", LocalDate.class), rs.getObject("due_date", LocalDate.class),
                             rs.getBoolean("sure_wrong"), graduatedAt == null ? null : graduatedAt.toInstant());
                 })
@@ -184,6 +186,21 @@ class ConceptProgresses {
                 .params(userId, conceptId)
                 .query(Boolean.class)
                 .single();
+    }
+
+    /** 이 개념에서 지금까지 도달한 가장 높은 단계. 아직 풀어 본 적이 없으면 0 */
+    int bestStage(long userId, long conceptId) {
+        return jdbc.sql("select best_stage from concept_progress where user_id = ? and concept_id = ?")
+                .params(userId, conceptId)
+                .query(Integer.class)
+                .optional()
+                .orElse(0);
+    }
+
+    /** 지금까지 낸 답 수 */
+    int retrievals(long userId) {
+        return jdbc.sql("select count(*) from answer_submission where user_id = ?")
+                .param(userId).query(Integer.class).single();
     }
 
     private int lockStage(long userId, long conceptId) {

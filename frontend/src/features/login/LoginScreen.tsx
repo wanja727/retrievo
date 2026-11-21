@@ -12,19 +12,27 @@ function loginFailed(): boolean {
 
 /**
  * 로그인. 카카오만 쓴다 (ADR-010). 비밀번호를 받지 않는다.
- * 카카오 로그인 버튼은 카카오 디자인 가이드(노란 배경, 말풍선 심볼)를 따른다. 화면의 나머지는 흑백이다 (ADR-018).
+ * 카카오 로그인 버튼은 카카오 디자인 가이드(노란 배경, 말풍선 심볼)를 따른다. 화면의 나머지는 파스텔 테마다 (ADR-023).
  */
 export function LoginScreen() {
   const failed = useClientValue(loginFailed, false);
 
   return (
-    <main className="app-frame">
+    <main className="app-frame celebrate">
       <section className="flex flex-1 flex-col justify-center px-6">
-        <div className="text-[13px] font-medium text-soft">Retrievo</div>
-        <h1 className="mt-3 text-[34px] leading-[1.25] font-semibold tracking-[-1.2px]">
+        <div className="flex items-center gap-2 text-[15px] font-semibold">
+          <span
+            className="flex size-7 items-center justify-center rounded-lg bg-accent text-[15px] font-bold text-white"
+            aria-hidden="true"
+          >
+            R
+          </span>
+          Retrievo
+        </div>
+        <h1 className="mt-5 text-[40px] leading-[1.25] font-semibold tracking-[-1.2px]">
           꺼낼수록
           <br />
-          쌓이는 지식
+          <span className="text-accent-ink">쌓이는 지식</span>
         </h1>
         <p className="mt-4 text-[15px] leading-relaxed text-muted">
           답을 먼저 꺼내고, 3일·7일·21일 뒤에 다른 문제로 다시 확인해요.
@@ -40,20 +48,20 @@ export function LoginScreen() {
         {apiMode === "mock" ? (
           <Link
             href="/"
-            className="flex h-14 w-full items-center justify-center rounded-full bg-ink text-base font-semibold text-white"
+            className="btn-primary flex h-14 w-full items-center justify-center rounded-full text-[17px] font-semibold text-white"
           >
             목 API로 둘러보기
           </Link>
         ) : (
           <a
             href={KAKAO_LOGIN}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] text-base font-semibold text-black/85"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] text-[17px] font-semibold text-black/85"
           >
             <KakaoSymbol />
             카카오 로그인
           </a>
         )}
-        <p className="mt-3 text-center text-xs leading-relaxed text-soft">
+        <p className="mt-3 text-center text-[13px] leading-relaxed text-soft">
           비밀번호는 받지 않아요. 카카오에서 닉네임만 받아 와요.
         </p>
       </div>

@@ -1,8 +1,9 @@
 import { isCorrect } from "../grading";
+import { weekDates } from "../memory";
 import { serviceDate } from "../schedule";
-import { nPlusOneSteps } from "./mockLessonBody";
 import type {
   ConceptStatus,
+  Home,
   LessonSummary,
   QuestionView,
   RetrievoApi,
@@ -132,6 +133,15 @@ const lessons: LessonSummary[] = [
   { id: 3, key: "isolation-level", unit: "DB", title: "격리 수준과 팬텀 리드", questionCount: 1 },
   { id: 4, key: "jpa-persistence-context", unit: "JPA", title: "영속성 컨텍스트", questionCount: 0 },
   { id: 5, key: "idempotency", unit: "설계", title: "멱등성", questionCount: 1 },
+  { id: 6, key: "db-index", unit: "DB", title: "인덱스와 실행 계획", questionCount: 0 },
+  { id: 7, key: "spring-di", unit: "Spring", title: "의존성 주입과 빈 생명주기", questionCount: 0 },
+  { id: 8, key: "http-cache", unit: "네트워크", title: "HTTP 캐시", questionCount: 0 },
+  { id: 9, key: "java-gc", unit: "Java", title: "GC와 메모리 영역", questionCount: 0 },
+  { id: 10, key: "optimistic-lock", unit: "JPA", title: "낙관적 락", questionCount: 0 },
+  { id: 11, key: "deadlock", unit: "DB", title: "교착 상태", questionCount: 0 },
+  { id: 12, key: "tcp-handshake", unit: "네트워크", title: "TCP 연결", questionCount: 0 },
+  { id: 13, key: "java-concurrency", unit: "Java", title: "동시성과 synchronized", questionCount: 0 },
+  { id: 14, key: "redis-cache", unit: "설계", title: "캐시 전략", questionCount: 0 },
 ];
 
 const conceptNames: Record<number, string> = {
@@ -140,19 +150,49 @@ const conceptNames: Record<number, string> = {
   13: "DB · 격리 수준과 팬텀 리드",
   14: "JPA · 영속성 컨텍스트",
   15: "설계 · 멱등성",
+  16: "DB · 인덱스와 실행 계획",
+  17: "Spring · 의존성 주입과 빈 생명주기",
+  18: "네트워크 · HTTP 캐시",
+  19: "Java · GC와 메모리 영역",
+  20: "JPA · 낙관적 락",
+  21: "DB · 교착 상태",
+  22: "네트워크 · TCP 연결",
 };
 
-const conceptLesson: Record<number, number> = { 11: 1, 12: 2, 13: 3, 14: 4, 15: 5 };
+const conceptLesson: Record<number, number> = {
+  11: 1,
+  12: 2,
+  13: 3,
+  14: 4,
+  15: 5,
+  16: 6,
+  17: 7,
+  18: 8,
+  19: 9,
+  20: 10,
+  21: 11,
+  22: 12,
+};
 
 /**
- * 개념마다 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 배운 지 며칠, 다음 확인까지 며칠, 확실했는데 틀렸는지.
+ * 개념마다 통과한 확인 수(0 = 배우는 중, 4 = 졸업), 지금까지 가장 높았던 단계, 배운 지 며칠, 다음 확인까지 며칠, 확실했는데 틀렸는지.
  * 15(멱등성)는 아직 풀지 않은 개념이라 없다
  */
-const progress: Record<number, { stage: number; learnedDaysAgo: number; dueInDays: number; sureWrong: boolean }> = {
-  12: { stage: 1, learnedDaysAgo: 8, dueInDays: 0, sureWrong: true },
-  11: { stage: 1, learnedDaysAgo: 3, dueInDays: 0, sureWrong: false },
-  13: { stage: 3, learnedDaysAgo: 21, dueInDays: 0, sureWrong: false },
-  14: { stage: 4, learnedDaysAgo: 30, dueInDays: 0, sureWrong: false },
+const progress: Record<
+  number,
+  { stage: number; best: number; learnedDaysAgo: number; dueInDays: number; sureWrong: boolean }
+> = {
+  12: { stage: 1, best: 2, learnedDaysAgo: 8, dueInDays: 0, sureWrong: true },
+  11: { stage: 1, best: 1, learnedDaysAgo: 3, dueInDays: 0, sureWrong: false },
+  13: { stage: 3, best: 3, learnedDaysAgo: 21, dueInDays: 0, sureWrong: false },
+  14: { stage: 4, best: 4, learnedDaysAgo: 30, dueInDays: 0, sureWrong: false },
+  16: { stage: 4, best: 4, learnedDaysAgo: 40, dueInDays: 0, sureWrong: false },
+  17: { stage: 4, best: 4, learnedDaysAgo: 36, dueInDays: 0, sureWrong: false },
+  18: { stage: 3, best: 3, learnedDaysAgo: 12, dueInDays: 9, sureWrong: false },
+  19: { stage: 3, best: 3, learnedDaysAgo: 10, dueInDays: 11, sureWrong: false },
+  20: { stage: 2, best: 2, learnedDaysAgo: 5, dueInDays: 2, sureWrong: false },
+  21: { stage: 2, best: 3, learnedDaysAgo: 15, dueInDays: 1, sureWrong: false },
+  22: { stage: 1, best: 1, learnedDaysAgo: 1, dueInDays: 2, sureWrong: false },
 };
 
 /** 마지막 확인에서 가르치듯 말해 볼 질문. 실제로는 개념의 서술형(연습) 문제에서 고른다 */
@@ -176,6 +216,7 @@ function recordCheck(conceptId: number, correct: boolean, sure: boolean) {
   const gaps = [0, 4, 14, 0];
   if (correct) {
     p.stage += 1;
+    p.best = Math.max(p.best, p.stage);
     p.dueInDays = gaps[p.stage - 1] ?? 0;
     p.sureWrong = false;
   } else {
@@ -187,6 +228,16 @@ function recordCheck(conceptId: number, correct: boolean, sure: boolean) {
 
 /** 오늘 레슨에서 맞힌 문제. 개념의 레슨 문제를 모두 맞히면 배운 날 기준을 통과한다 (백엔드와 같은 규칙, ADR-021) */
 const lessonCorrectToday: Record<number, Set<number>> = {};
+
+/** 오늘 낸 답 수, 오늘 끝낸 확인 수, 지금까지 낸 답 수 (예시 값에서 시작한다) */
+let answersToday = 0;
+let checksDoneToday = 0;
+let retrievals = 1284;
+
+/** 어제까지 이어진 연속 학습 일수 (예시 값) */
+const STREAK_UNTIL_YESTERDAY = 12;
+
+const stageCount = (stage: number) => Object.values(progress).filter((p) => p.stage === stage).length;
 
 /** 연습에 낸 문제 순서. 가장 오래전에 낸 문제를 먼저 낸다 (백엔드와 같은 규칙) */
 const lastSeen = new Map<number, number>();
@@ -210,13 +261,13 @@ function delay<T>(value: T): Promise<T> {
 /** 처음 푼 개념은 배우는 중(0단계)으로 만들고, 레슨 문제를 오늘 모두 맞히면 1단계로 올려 3일 뒤 확인을 잡는다 */
 function recordLessonAnswer(q: MockQuestion, correct: boolean) {
   const { conceptId } = q;
-  progress[conceptId] ??= { stage: 0, learnedDaysAgo: 0, dueInDays: 0, sureWrong: false };
+  progress[conceptId] ??= { stage: 0, best: 0, learnedDaysAgo: 0, dueInDays: 0, sureWrong: false };
   if (!correct || progress[conceptId].stage > 0) return;
   const solved = (lessonCorrectToday[conceptId] ??= new Set());
   solved.add(q.questionVersionId);
   const all = questions.filter((it) => it.conceptId === conceptId && it.lessonId === q.lessonId);
   if (all.every((it) => solved.has(it.questionVersionId))) {
-    progress[conceptId] = { stage: 1, learnedDaysAgo: 0, dueInDays: 3, sureWrong: false };
+    progress[conceptId] = { stage: 1, best: 1, learnedDaysAgo: 0, dueInDays: 3, sureWrong: false };
   }
 }
 
@@ -251,8 +302,7 @@ export const mockApi: RetrievoApi = {
   lesson: async (lessonId) => {
     const lesson = lessons.find((l) => l.id === lessonId);
     if (!lesson) throw new Error("없는 레슨이다");
-    // 본문은 N+1 레슨에만 있다. 나머지는 레슨 사이트로 연결된다
-    return delay({ ...lesson, steps: lesson.key === "jpa-n-plus-1" ? nPlusOneSteps : null });
+    return delay(lesson);
   },
 
   lessonQuestions: async (lessonId) => {
@@ -277,6 +327,7 @@ export const mockApi: RetrievoApi = {
           dueDate: graduated || p.stage === 0 ? null : daysFromToday(p.dueInDays),
           sureWrong: p.sureWrong,
           graduatedAt: graduated ? daysFromToday(-9) : null,
+          bestStage: p.best,
         };
       }),
     ),
@@ -295,6 +346,22 @@ export const mockApi: RetrievoApi = {
 
   me: () => delay({ id: 1, nickname: "me", joinedOn: daysFromToday(-30), days: 31 }),
 
+  home: () => {
+    const today = daysFromToday(0);
+    const all = Object.values(progress);
+    const due = all.filter((p) => p.stage >= 1 && p.stage < 4 && p.dueInDays <= 0).length;
+    return delay<Home>({
+      today,
+      checksDone: checksDoneToday,
+      checksTotal: checksDoneToday + due,
+      streak: STREAK_UNTIL_YESTERDAY + (answersToday > 0 ? 1 : 0),
+      activeDates: weekDates(today).filter((d) => d < today || (d === today && answersToday > 0)),
+      learned: all.filter((p) => p.best >= 1).length,
+      longTerm: all.filter((p) => p.best >= 4).length,
+      retrievals,
+    });
+  },
+
   report: () => {
     // 예시 기록. 실제 값은 백엔드가 풀이·확인 기록에서 센다
     const activity: { date: string; count: number }[] = [];
@@ -310,8 +377,14 @@ export const mockApi: RetrievoApi = {
         day7: { correct: 22, total: 36 },
         day21: { correct: 13, total: 24 },
       },
-      stages: { learning: 2, passed1: 12, passed2: 11, passed3: 8, graduated: 23 },
-      retrievals: 1284,
+      stages: {
+        learning: stageCount(0),
+        passed1: stageCount(1),
+        passed2: stageCount(2),
+        passed3: stageCount(3),
+        graduated: stageCount(4),
+      },
+      retrievals,
       confidence: [
         { confidence: "SURE" as const, correct: 410, total: 500 },
         { confidence: "UNSURE" as const, correct: 270, total: 500 },
@@ -331,6 +404,10 @@ export const mockApi: RetrievoApi = {
 
     const correct = isCorrect(q.type, request.selected, q.answer);
     lastSeen.set(q.questionVersionId, seenClock++);
+    answersToday += 1;
+    retrievals += 1;
+    if (request.mode === "DELAYED_CHECK") checksDoneToday += 1;
+    const before = progress[q.conceptId]?.best ?? 0;
     if (request.mode === "LESSON") recordLessonAnswer(q, correct);
     else if (request.mode === "DELAYED_CHECK") recordCheck(q.conceptId, correct, request.confidence === "SURE");
     // PRACTICE는 기록만 하고 일정을 바꾸지 않는다
@@ -344,6 +421,8 @@ export const mockApi: RetrievoApi = {
       explanation: q.explanation,
       sourceUrl: q.sourceUrl,
       delayedCheck: request.mode === "DELAYED_CHECK",
+      record: (progress[q.conceptId]?.best ?? 0) > before ? { before, after: progress[q.conceptId].best } : null,
+      retrievals,
     };
     submitted.set(request.clientSubmissionId, result);
     return delay(result);

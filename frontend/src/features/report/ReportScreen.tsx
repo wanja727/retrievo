@@ -5,11 +5,14 @@ import { BottomNav } from "@/components/ui/BottomNav";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { CONFIDENCE_LABEL } from "@/components/ui/ConfidenceTabs";
-import { api, type Rate, type Report } from "@/lib/api";
+import { api, type Home, type Report } from "@/lib/api";
 import { activityGrid, activityLevel, percent } from "@/lib/report";
 import { useRemote } from "@/lib/useRemote";
 
-const fetchReport = () => api.report();
+const fetchReport = async () => {
+  const [report, home] = await Promise.all([api.report(), api.home()]);
+  return { report, home };
+};
 
 /**
  * 기록 (20장). 인출이 실제로 남았는지를 숫자로 보여준다.
@@ -28,12 +31,12 @@ export function ReportScreen() {
         <h1 className="text-[17px] font-semibold tracking-[-0.3px]">기록</h1>
       </header>
       {state.status === "loading" ? (
-        <div className="px-6 pt-4" aria-busy="true" aria-label="불러오는 중">
-          <div className="h-20 w-40 rounded bg-surface" />
-          <div className="mt-8 h-36 rounded bg-surface" />
+        <div className="mx-4 mt-1" aria-busy="true" aria-label="불러오는 중">
+          <div className="hero h-52" />
+          <div className="card mt-4 h-48" />
         </div>
       ) : (
-        <ReportBody report={state.data} />
+        <ReportBody report={state.data.report} home={state.data.home} />
       )}
       <div className="mt-auto" />
       <BottomNav active="기록" />
@@ -41,12 +44,10 @@ export function ReportScreen() {
   );
 }
 
-function ReportBody({ report }: { report: Report }) {
-  const { stages } = report;
-  const managed = stages.learning + stages.passed1 + stages.passed2 + stages.passed3;
+function ReportBody({ report, home }: { report: Report; home: Home }) {
   return (
     <div className="pb-8">
-      <Hero day7={report.curve.day7} graduated={stages.graduated} managed={managed} retrievals={report.retrievals} />
+      <Hero home={home} />
       <CurveSection report={report} />
       <ActivitySection report={report} />
       <StageSection report={report} />
@@ -61,48 +62,38 @@ function SectionTitle({ id, children, right }: { id: string; children: React.Rea
       <h2 id={id} className="text-[15px] font-semibold tracking-[-0.2px]">
         {children}
       </h2>
-      {right && <span className="text-xs text-soft">{right}</span>}
+      {right && <span className="text-[13px] text-soft">{right}</span>}
     </div>
   );
 }
 
-/** 맨 위: 7일 뒤에도 남은 기억. 이 서비스가 지키려는 단 하나의 숫자다 (ADR-011 판단 지표) */
-function Hero({ day7, graduated, managed, retrievals }: { day7: Rate; graduated: number; managed: number; retrievals: number }) {
-  const p = percent(day7);
+/** 맨 위: 지금까지 꺼낸 횟수. 쌓이기만 하는 값을 먼저 보여주고, 정답률 같은 비율은 아래 칸에 둔다 */
+function Hero({ home }: { home: Home }) {
   return (
-    <section className="px-6 pt-4" aria-labelledby="hero-title">
+    <section className="hero mx-4 mt-1 px-6 pt-5 pb-5" aria-labelledby="hero-title">
       <h2 id="hero-title" className="text-[13px] text-muted">
-        7일 뒤에도 남은 기억
+        지금까지 꺼낸 횟수
       </h2>
-      {p === null ? (
-        <p className="mt-2 text-[15px] leading-relaxed text-muted">
-          아직 7일 확인을 한 개념이 없어요. 배운 지 7일이 지나면 여기에 보여요.
-        </p>
-      ) : (
-        <>
-          <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-[72px] leading-none font-semibold tracking-[-4px]">{p}</span>
-            <span className="text-2xl font-semibold text-soft">%</span>
-          </div>
-          <p className="mt-2 text-xs text-soft">
-            7일 확인 {day7.total}번 중 {day7.correct}번 맞힘
-          </p>
-        </>
-      )}
-      <dl className="mt-6 grid grid-cols-3 border-y border-line">
-        <Stat label="졸업한 개념" value={graduated} />
-        <Stat label="관리 중인 개념" value={managed} border />
-        <Stat label="꺼낸 횟수" value={retrievals} border />
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-[72px] leading-none font-semibold tracking-[-4px]">
+          {home.retrievals.toLocaleString("ko-KR")}
+        </span>
+        <span className="text-[22px] font-medium text-soft">번</span>
+      </div>
+      <dl className="mt-5 grid grid-cols-3 gap-2">
+        <Stat label="연속 학습 일수" value={home.streak} />
+        <Stat label="배운 개념" value={home.learned} />
+        <Stat label="장기 기억 개념" value={home.longTerm} />
       </dl>
     </section>
   );
 }
 
-function Stat({ label, value, border }: { label: string; value: number; border?: boolean }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className={`py-3.5 ${border ? "border-l border-line pl-4" : ""}`}>
-      <dd className="text-xl font-semibold tracking-[-0.5px]">{value.toLocaleString("ko-KR")}</dd>
-      <dt className="mt-0.5 text-xs text-soft">{label}</dt>
+    <div className="rounded-2xl bg-white/55 px-3 py-3">
+      <dd className="text-[22px] font-semibold tracking-[-0.5px]">{value.toLocaleString("ko-KR")}</dd>
+      <dt className="mt-0.5 text-[11px] text-muted">{label}</dt>
     </div>
   );
 }
@@ -125,7 +116,7 @@ function CurveSection({ report }: { report: Report }) {
   const last = known.at(-1);
 
   return (
-    <section className="mx-6 mt-10" aria-labelledby="curve-title">
+    <section className="card mx-4 mt-4 px-5 py-5" aria-labelledby="curve-title">
       <SectionTitle id="curve-title">내 기억 곡선</SectionTitle>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
         {last && last.i > 0 ? (
@@ -144,14 +135,14 @@ function CurveSection({ report }: { report: Report }) {
           viewBox={`0 0 ${W} ${H}`}
           className="mt-4 block"
         >
-          <line x1="0" y1="10" x2={W} y2="10" stroke="#F0F0F0" />
-          <line x1="0" y1="70" x2={W} y2="70" stroke="#F0F0F0" />
-          <line x1="0" y1="130" x2={W} y2="130" stroke="#E5E5E5" />
+          <line x1="0" y1="10" x2={W} y2="10" stroke="var(--color-line)" />
+          <line x1="0" y1="70" x2={W} y2="70" stroke="var(--color-line)" />
+          <line x1="0" y1="130" x2={W} y2="130" stroke="var(--color-line-strong)" />
           {known.length > 1 && (
             <polyline
               points={known.map((p) => `${xs[p.i]},${y(p.v)}`).join(" ")}
               fill="none"
-              stroke="#0A0A0A"
+              stroke="var(--color-accent)"
               strokeWidth="1.8"
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -163,8 +154,8 @@ function CurveSection({ report }: { report: Report }) {
                 cx={xs[p.i]}
                 cy={y(p.v)}
                 r={p === last ? 4 : 2.5}
-                fill={p === last ? "#0A0A0A" : "#FFFFFF"}
-                stroke="#0A0A0A"
+                fill={p === last ? "var(--color-accent)" : "#FFFFFF"}
+                stroke="var(--color-accent)"
                 strokeWidth="1.4"
               />
               <text
@@ -173,7 +164,7 @@ function CurveSection({ report }: { report: Report }) {
                 textAnchor={p.i === 0 ? "start" : p.i === 3 ? "end" : "middle"}
                 fontSize="11"
                 fontWeight={p === last ? 600 : 400}
-                fill={p === last ? "#0A0A0A" : "#8A8A8A"}
+                fill={p === last ? "var(--color-accent-ink)" : "var(--color-soft)"}
               >
                 {p.v}%
               </text>
@@ -193,7 +184,7 @@ function CurveSection({ report }: { report: Report }) {
   );
 }
 
-const SHADES = ["bg-[#F0F0F0]", "bg-[#D4D4D4]", "bg-faint", "bg-sub", "bg-ink"];
+const SHADES = ["bg-[#f1eff8]", "bg-[#ddd7fb]", "bg-[#b9aff6]", "bg-accent", "bg-accent-ink"];
 
 /** 꺼낸 날: 최근 26주 동안 답을 낸 날. 진할수록 그날 많이 꺼냈다 */
 function ActivitySection({ report }: { report: Report }) {
@@ -201,8 +192,8 @@ function ActivitySection({ report }: { report: Report }) {
   const days = report.activity.length;
   const month = (date: string) => `${Number(date.slice(5, 7))}월`;
   return (
-    <section className="mx-6 mt-10" aria-labelledby="activity-title">
-      <SectionTitle id="activity-title" right={`최근 26주 · ${days}일`}>
+    <section className="card mx-4 mt-4 px-5 py-5" aria-labelledby="activity-title">
+      <SectionTitle id="activity-title" right={`최근 26주 동안 ${days}일`}>
         꺼낸 날
       </SectionTitle>
       <div
@@ -216,7 +207,7 @@ function ActivitySection({ report }: { report: Report }) {
             {column.map((cell) => (
               <span
                 key={cell.date}
-                title={cell.future ? undefined : `${cell.date} · ${cell.count}번`}
+                title={cell.future ? undefined : `${cell.date}, ${cell.count}번`}
                 className={`aspect-square rounded-[2px] ${cell.future ? "" : SHADES[activityLevel(cell.count)]}`}
               />
             ))}
@@ -238,7 +229,7 @@ function ActivitySection({ report }: { report: Report }) {
   );
 }
 
-/** 개념이 어디까지 왔는지: 단계별 개념 수. 졸업만 골드 */
+/** 개념이 어디까지 왔는지: 단계별 개념 수. 졸업만 진하게 */
 function StageSection({ report }: { report: Report }) {
   const { learning, passed1, passed2, passed3, graduated } = report.stages;
   const rows = [
@@ -246,29 +237,29 @@ function StageSection({ report }: { report: Report }) {
     { label: "배운 날 통과", n: passed1 },
     { label: "3일 뒤 통과", n: passed2 },
     { label: "7일 뒤 통과", n: passed3 },
-    { label: "졸업 · 21일 뒤 통과", n: graduated, gold: true },
+    { label: "장기 기억", n: graduated, last: true },
   ];
   const learned = passed1 + passed2 + passed3 + graduated;
   const max = Math.max(1, ...rows.map((r) => r.n));
   return (
-    <section className="mx-6 mt-10" aria-labelledby="stage-title">
+    <section className="card mx-4 mt-4 px-5 py-5" aria-labelledby="stage-title">
       <SectionTitle id="stage-title">개념이 어디까지 왔는지</SectionTitle>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
         {learned === 0 ? (
           "레슨 문제를 같은 날 모두 맞힌 개념부터 여기에 쌓여요."
         ) : (
           <>
-            배운 개념 {learned}개 가운데 <b className="font-semibold text-ink">{graduated}개</b>가 졸업해서 더는 묻지 않아요.
+            배운 개념 {learned}개 가운데 <b className="font-semibold text-ink">{graduated}개</b>가 장기 기억이 돼서 더는 묻지 않아요.
           </>
         )}
       </p>
       <div className="mt-4 flex flex-col gap-2.5">
         {rows.map((r) => (
           <div key={r.label} className="grid grid-cols-[112px_1fr_28px] items-center gap-3">
-            <span className={`text-[13px] ${r.gold ? "font-semibold text-ink" : "text-muted"}`}>{r.label}</span>
-            <div className="h-1.5 rounded-full bg-[#F0F0F0]">
+            <span className={`text-[13px] ${r.last ? "font-semibold text-accent-ink" : "text-muted"}`}>{r.label}</span>
+            <div className="h-2 rounded-full bg-line">
               <div
-                className={`h-full rounded-full ${r.gold ? "bg-gold" : "bg-faint"}`}
+                className={`h-full rounded-full ${r.last ? "bar-fill" : "bg-accent-line"}`}
                 style={{ width: `${(r.n / max) * 100}%` }}
               />
             </div>
@@ -285,7 +276,7 @@ function ConfidenceSection({ report }: { report: Report }) {
   const sure = report.confidence.find((c) => c.confidence === "SURE");
   const sureRate = sure ? percent(sure) : null;
   return (
-    <section className="mx-6 mt-10" aria-labelledby="confidence-title">
+    <section className="card mx-4 mt-4 px-5 py-5" aria-labelledby="confidence-title">
       <SectionTitle id="confidence-title">확신과 실제</SectionTitle>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
         {sureRate === null
@@ -298,8 +289,8 @@ function ConfidenceSection({ report }: { report: Report }) {
           return (
             <div key={c.confidence} className="grid grid-cols-[40px_1fr_64px] items-center gap-3">
               <span className="text-[13px] text-muted">{CONFIDENCE_LABEL[c.confidence]}</span>
-              <div className="h-1.5 rounded-full bg-[#F0F0F0]">
-                <div className="h-full rounded-full bg-ink" style={{ width: `${p ?? 0}%` }} />
+              <div className="h-2 rounded-full bg-line">
+                <div className="bar-fill h-full rounded-full" style={{ width: `${p ?? 0}%` }} />
               </div>
               <span className="text-right text-[13px]">
                 {p === null ? <span className="text-faint">답 없음</span> : <b className="font-semibold">{p}%</b>}
@@ -311,13 +302,13 @@ function ConfidenceSection({ report }: { report: Report }) {
       {report.sureWrong > 0 && (
         <Link
           href="/lessons"
-          className="mt-5 flex h-12 items-center justify-between border-y border-line text-sm font-medium"
+          className="mt-5 flex h-12 items-center justify-between rounded-2xl bg-wrong-soft px-4 text-[15px] font-medium text-wrong-ink"
         >
           <span className="flex items-center gap-2">
             <span className="size-1.5 rounded-full bg-wrong" aria-hidden="true" />
             확실했는데 틀린 개념 {report.sureWrong}개
           </span>
-          <ArrowRightIcon size={16} className="text-faint" />
+          <ArrowRightIcon size={16} />
         </Link>
       )}
     </section>

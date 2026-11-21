@@ -17,6 +17,7 @@ function concept(lessonId: number, patch: Partial<ConceptStatus>): ConceptStatus
     dueDate: "2026-11-18",
     sureWrong: false,
     graduatedAt: null,
+    bestStage: 1,
     ...patch,
   };
 }
@@ -52,14 +53,14 @@ describe("nextCheckLabel", () => {
 
   it("언제 다시 묻는지와 그 이유를 보여준다", () => {
     expect(nextCheckLabel(managed({ stage: 0, dueDate: null, learnedOn: null }), TODAY)).toBe(
-      "배우는 중 · 같은 날 모두 맞히면 3일 뒤 확인",
+      "같은 날 모두 맞히면 학습 완료",
     );
     expect(nextCheckLabel(managed({ dueDate: TODAY }), TODAY)).toBe("오늘 확인");
     expect(nextCheckLabel(managed({ dueDate: "2026-11-15" }), TODAY)).toBe("오늘 확인");
     expect(nextCheckLabel(managed({ stage: 2, dueDate: "2026-11-23" }), TODAY)).toBe("5일 뒤 확인");
-    expect(nextCheckLabel(managed({ stage: 3, dueDate: "2026-11-30" }), TODAY)).toBe("12일 뒤 확인 · 통과하면 졸업");
+    expect(nextCheckLabel(managed({ stage: 3, dueDate: "2026-11-30" }), TODAY)).toBe("12일 뒤 확인");
     expect(nextCheckLabel(managed({ dueDate: "2026-11-19", sureWrong: true }), TODAY)).toBe(
-      "1일 뒤 확인 · 확실했는데 틀림",
+      "1일 뒤 확인, 틀렸던 개념",
     );
   });
 

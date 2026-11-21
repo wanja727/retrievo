@@ -439,6 +439,102 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 기억_기록은_맞힐_때_늘고_틀려도_줄지_않는다() throws Exception {
+        // 배운 날: 마지막 문제를 맞혀 학습을 마친 답에만 기록이 는다 (0 → 1)
+        List<Long> versions = jdbc.queryForList("""
+                select v.id from question q join question_version v on v.id = q.current_version_id
+                join concept c on c.id = q.concept_id
+                where c.external_key = 'dev/n-plus-1/lazy-loop' and q.purpose = 'JUDGMENT' and q.status = 'REVIEWED'
+                order by q.sort_order, q.id
+                """, Long.class);
+        for (int i = 0; i < versions.size(); i++) {
+            String answer = jdbc.queryForObject("select answer from question_version where id = ?", String.class,
+                    versions.get(i));
+            JsonNode result = body(submit(versions.get(i), answer, "SURE", null));
+            assertThat(result.get("retrievals").asInt()).isEqualTo(i + 1);
+            if (i < versions.size() - 1) {
+                assertThat(result.get("record").isNull()).isTrue();
+            } else {
+                assertThat(result.get("record").get("before").asInt()).isZero();
+                assertThat(result.get("record").get("after").asInt()).isEqualTo(1);
+            }
+        }
+
+        // 3일 뒤 확인을 맞히면 1 → 2
+        clock.advance(Duration.ofDays(3));
+        JsonNode today = getJson("/api/me/delayed-checks/today").get(0).get("question");
+        String answer = jdbc.queryForObject("select answer from question_version where id = ?", String.class,
+                today.get("questionVersionId").asLong());
+        UUID clientId = UUID.randomUUID();
+        JsonNode passed = body(submit(clientId, today.get("questionVersionId").asLong(), answer, "SURE",
+                "DELAYED_CHECK"));
+        assertThat(passed.get("record").get("before").asInt()).isEqualTo(1);
+        assertThat(passed.get("record").get("after").asInt()).isEqualTo(2);
+        // 같은 제출을 다시 보내면 기록이 또 는 것처럼 보이지 않는다
+        JsonNode again = body(submit(clientId, today.get("questionVersionId").asLong(), answer, "SURE",
+                "DELAYED_CHECK"));
+        assertThat(again.get("record").isNull()).isTrue();
+
+        // 7일 뒤 확인에서 틀리면 단계는 내려가지만 기록은 그대로다
+        clock.advance(Duration.ofDays(4));
+        checkToday("lazy-loop", false, "UNSURE");
+        JsonNode concept = getJson("/api/me/concepts").get(0);
+        assertThat(concept.get("stage").asInt()).isEqualTo(1);
+        assertThat(concept.get("bestStage").asInt()).isEqualTo(2);
+
+        // 다시 3일 뒤 확인을 맞혀 2단계로 돌아와도, 이미 도달했던 단계라 기록이 늘지 않는다
+        clock.advance(Duration.ofDays(3));
+        JsonNode retry = getJson("/api/me/delayed-checks/today").get(0).get("question");
+        String retryAnswer = jdbc.queryForObject("select answer from question_version where id = ?", String.class,
+                retry.get("questionVersionId").asLong());
+        JsonNode back = body(submit(retry.get("questionVersionId").asLong(), retryAnswer, "SURE", "DELAYED_CHECK"));
+        assertThat(back.get("record").isNull()).isTrue();
+    }
+
+    @Test
+    void 오늘_화면은_쌓이기만_하는_값을_준다() throws Exception {
+        JsonNode empty = getJson("/api/me/home");
+        assertThat(empty.get("today").asText()).isEqualTo(DAY0.toString());
+        assertThat(empty.get("streak").asInt()).isZero();
+        assertThat(empty.get("checksTotal").asInt()).isZero();
+        assertThat(empty.get("learned").asInt()).isZero();
+
+        // 배운 날 (화요일): 연속 1일, 배운 개념 1
+        learn("lazy-loop");
+        JsonNode learned = getJson("/api/me/home");
+        assertThat(learned.get("streak").asInt()).isEqualTo(1);
+        assertThat(learned.get("activeDates")).hasSize(1);
+        assertThat(learned.get("activeDates").get(0).asText()).isEqualTo(DAY0.toString());
+        assertThat(learned.get("learned").asInt()).isEqualTo(1);
+        assertThat(learned.get("longTerm").asInt()).isZero();
+        // 이 개념의 판정 문제는 2개다
+        assertThat(learned.get("retrievals").asInt()).isEqualTo(2);
+        assertThat(learned.get("checksDone").asInt()).isZero();
+        assertThat(learned.get("checksTotal").asInt()).isZero();
+
+        // 다음 날 아직 답을 내지 않았으면 연속은 어제까지 센 값이다
+        clock.advance(Duration.ofDays(1));
+        assertThat(getJson("/api/me/home").get("streak").asInt()).isEqualTo(1);
+
+        // 3일 뒤 (금요일): 하루 넘게 걸러 연속은 끊겼고, 오늘 확인이 하나 남았다
+        clock.advance(Duration.ofDays(2));
+        JsonNode due = getJson("/api/me/home");
+        assertThat(due.get("streak").asInt()).isZero();
+        assertThat(due.get("checksDone").asInt()).isZero();
+        assertThat(due.get("checksTotal").asInt()).isEqualTo(1);
+
+        // 확인을 틀려도 오늘 끝낸 확인으로 세고, 배운 개념 수는 줄지 않는다
+        checkToday("lazy-loop", false, "UNSURE");
+        JsonNode done = getJson("/api/me/home");
+        assertThat(done.get("checksDone").asInt()).isEqualTo(1);
+        assertThat(done.get("checksTotal").asInt()).isEqualTo(1);
+        assertThat(done.get("streak").asInt()).isEqualTo(1);
+        assertThat(done.get("activeDates")).hasSize(2);
+        assertThat(done.get("learned").asInt()).isEqualTo(1);
+        assertThat(done.get("retrievals").asInt()).isEqualTo(3);
+    }
+
+    @Test
     void 로그인하지_않으면_401() throws Exception {
         mvc.perform(get("/api/me/delayed-checks/today")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/me/delayed-checks/today").header("X-Dev-User-Id", 9999))

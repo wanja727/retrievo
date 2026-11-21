@@ -2,21 +2,21 @@ import { highlight, type TokenKind } from "@/lib/highlight";
 
 const COLORS: Record<TokenKind, string | undefined> = {
   plain: undefined,
-  keyword: "#C4A7E7",
-  type: "#9CCFD8",
-  call: "#F6C177",
-  annotation: "#F6C177",
-  comment: "#6E6E73",
-  string: "#A8D5A2",
-  number: "#EBBCBA",
+  keyword: "#8a63e0",
+  type: "#4f8fb8",
+  call: undefined,
+  annotation: "#d98a3d",
+  comment: "#a9a7b6",
+  string: "#3a9f7c",
+  number: "#d98a3d",
 };
 
 export type LineMark = "picked" | "answer" | "wrong";
 
 const MARK_STYLE: Record<LineMark, string> = {
-  picked: "bg-white/[0.14] shadow-[inset_2px_0_0_#ffffff]",
-  answer: "bg-gold/[0.18] shadow-[inset_2px_0_0_var(--color-gold)]",
-  wrong: "bg-wrong/[0.18] shadow-[inset_2px_0_0_var(--color-wrong)]",
+  picked: "bg-accent/[0.14] shadow-[inset_2px_0_0_var(--color-accent)]",
+  answer: "bg-ok/[0.18] shadow-[inset_2px_0_0_var(--color-ok)]",
+  wrong: "bg-wrong/[0.16] shadow-[inset_2px_0_0_var(--color-wrong)]",
 };
 
 interface Props {
@@ -27,18 +27,18 @@ interface Props {
   onPickLine?: (line: number) => void;
 }
 
-/** 줄 번호와 하이라이팅이 있는 어두운 코드 블록 */
+/** 줄 번호와 하이라이팅이 있는 코드 블록. 색은 레슨 사이트의 코드와 같다 */
 export function CodeBlock({ code, marks = {}, onPickLine }: Props) {
   const lines = highlight(code);
   return (
-    <div className="overflow-x-auto rounded-2xl bg-code py-4 font-mono text-[12px] leading-[1.85] text-[#E7E7E7] [scrollbar-width:none]">
+    <div className="overflow-x-auto tile rounded-2xl py-4 font-mono text-[13px] leading-[1.85] text-ink [scrollbar-width:none]">
       <div className="min-w-max">
         {lines.map((tokens, i) => {
           const no = i + 1;
           const mark = marks[no];
           const content = (
             <>
-              <span className="w-9 shrink-0 select-none pr-3 text-right text-[#4A4A4F]">{no}</span>
+              <span className="w-9 shrink-0 select-none pr-3 text-right text-faint">{no}</span>
               <span className="whitespace-pre pr-4">
                 {tokens.length === 0
                   ? " "
