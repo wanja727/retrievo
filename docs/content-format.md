@@ -22,9 +22,14 @@ concepts:             # 지연 확인은 개념 단위로 다른 문제를 골�
   - key: lazy-loop
     name: 지연 로딩 컬렉션을 루프에서 읽을 때 생기는 추가 쿼리
 
+coreQuestions:        # 선택. 레슨이 답하는 핵심 질문
+  - key: q1
+    text: N+1 문제는 무엇이고 왜 생기나요?
+
 questions:
   - key: lazy-loop-count
     concept: lazy-loop
+    coreQuestion: q1  # coreQuestions의 키. 이 문제의 근거가 되는 질문
     type: multiple_choice
     status: reviewed
     difficulty: 2
@@ -41,6 +46,7 @@ questions:
 | --- | --- | --- |
 | `key` | 예 | 레슨 안에서 고유. 가져올 때 `주제/레슨/키`가 전역 키가 된다. **한 번 정하면 바꾸지 않는다** (바꾸면 다른 문제로 본다) |
 | `concept` | 예 | `concepts`의 키 |
+| `coreQuestion` | 조건부 | `coreQuestions`의 키, 또는 핵심 질문 전체를 아우르는 문제면 `all`. 파일에 `coreQuestions`가 있으면 필수이고, 없으면 쓸 수 없다 |
 | `type` | 예 | `multiple_choice`, `ox`, `code_predict`, `line_pick`, `descriptive` |
 | `status` | 아니오 | `draft`(기본), `reviewed`, `hidden`. 사용자에게는 `reviewed`만 보인다 |
 | `difficulty` | 예 | 1~3 |
@@ -51,6 +57,20 @@ questions:
 | `checklist` | 형태별 | 서술형: 자기 채점 항목 4~5개 권장 |
 | `explanation` | 예 | 답을 낸 뒤에만 보여주는 해설 |
 | `source` | 권장 | 근거(공식 문서 링크). 검수 완료 문제에 없으면 경고 |
+
+## 핵심 질문 (`coreQuestions`, 선택)
+
+레슨이 답하는 핵심 질문을 적고, 문제마다 어느 질문에서 나왔는지 `coreQuestion`으로 묶는다. 문제의 근거가 레슨 어디에 있는지 파일만 보고 알 수 있게 하고, 질문마다 문제가 충분한지 기계로 셀 수 있게 하려는 것이다.
+
+| 항목 | 필수 | 설명 |
+| --- | --- | --- |
+| `key` | 예 | 파일 안에서 고유. 영문 소문자, 숫자, 하이픈. `all`은 쓸 수 없다. dev-lessons에서는 레슨 페이지의 장 id(`q1`, `q2`)와 같게 둔다 |
+| `text` | 예 | 질문 문장 |
+
+- 선택 항목이다. 적지 않은 파일은 지금까지와 똑같이 검사한다
+- 적은 파일은 모든 문제에 `coreQuestion`이 있어야 한다. 없는 키를 가리키면 오류다
+- 질문 여럿을 한꺼번에 묻는 문제(예: 면접 답변 전체)는 `coreQuestion: all`로 적는다
+- `concepts`와는 다르다. 개념은 앱이 지연 확인을 하는 단위이고, 핵심 질문은 문제의 근거를 묶는 표시다. 앱은 핵심 질문을 저장하지 않고, 바꿔도 문제의 새 버전이 생기지 않는다
 
 ## 형태와 용도
 
