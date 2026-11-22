@@ -2,14 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import { BottomActions, PrimaryButton } from "@/components/ui/buttons";
-import { api, type Confidence, type QuestionView, type SubmissionMode, type SubmissionResult } from "@/lib/api";
+import { api, type QuestionView, type SubmissionMode, type SubmissionResult } from "@/lib/api";
 import { ChooseStep } from "./ChooseStep";
 import { ResultStep } from "./ResultStep";
 
 type Step = "choose" | "result";
 
 /**
- * 문제 하나를 푸는 흐름: 보기와 확신도 → 해설.
+ * 문제 하나를 푸는 흐름: 보기 → 해설.
  * 보기를 열기 전에 답을 먼저 적게 하던 단계는 뺐다. 잘 만든 객관식만으로도 인출 효과가 거의 같고
  * (Smith & Karpicke 2014, Little 외 2012), 직접 써 보니 불편이 컸다 (ADR-022).
  * 정답과 해설은 제출한 뒤에만 받는다 (답 먼저). 레슨과 지연 확인이 같이 쓴다.
@@ -42,7 +42,6 @@ export function QuestionFlow({
    */
   const [clientSubmissionId, setClientSubmissionId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [confidence, setConfidence] = useState<Confidence | null>(null);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -53,7 +52,7 @@ export function QuestionFlow({
   };
 
   const submit = async () => {
-    if (!selected || !confidence) return;
+    if (!selected) return;
     const id = clientSubmissionId ?? crypto.randomUUID();
     setClientSubmissionId(id);
     setSubmitting(true);
@@ -63,7 +62,6 @@ export function QuestionFlow({
         clientSubmissionId: id,
         questionVersionId: question.questionVersionId,
         selected,
-        confidence,
         mode,
       });
       setResult(answered);
@@ -84,18 +82,14 @@ export function QuestionFlow({
           question={question}
           context={context}
           selected={selected}
-          confidence={confidence}
           onSelect={setSelected}
-          onConfidence={setConfidence}
         />
         <BottomActions>
           {submitError && <p className="pb-2 text-center text-[13px] text-wrong">{submitError}</p>}
-          <PrimaryButton onClick={submit} disabled={!selected || !confidence || submitting}>
+          <PrimaryButton onClick={submit} disabled={!selected || submitting}>
             {submitting ? "채점하는 중" : "제출"}
           </PrimaryButton>
-          {(!selected || !confidence) && (
-            <p className="pt-2 text-center text-[13px] text-soft">답과 확신도를 고르면 제출할 수 있어요</p>
-          )}
+          {!selected && <p className="pt-2 text-center text-[13px] text-soft">답을 고르면 제출할 수 있어요</p>}
         </BottomActions>
       </main>
     );

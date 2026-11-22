@@ -188,7 +188,6 @@ function ManagedRow({ progress: p, today }: { progress: LessonProgress; today: s
         <div className="truncate text-[15px] font-semibold tracking-[-0.2px]">{p.lesson.title}</div>
         <div className="mt-0.5 flex items-center gap-2 text-[13px] text-soft">
           <span className="shrink-0">{p.lesson.unit}</span>
-          {p.sureWrong && <span className="size-1.5 shrink-0 rounded-full bg-wrong" aria-hidden="true" />}
           <span className={`truncate ${due ? "font-medium text-accent-ink" : ""}`}>
             {today === "" ? " " : nextCheckLabel(p, today)}
           </span>

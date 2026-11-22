@@ -152,7 +152,6 @@ export function TodayScreen() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold tracking-[-0.2px]">{check.conceptName}</div>
                 <div className="mt-[3px] flex items-center gap-1.5 text-[13px] text-soft">
-                  {check.sureWrong && <span className="size-1.5 shrink-0 rounded-full bg-wrong" aria-hidden="true" />}
                   <span className="truncate">{checkReason(check)}</span>
                 </div>
               </div>

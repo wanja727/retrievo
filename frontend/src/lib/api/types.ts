@@ -11,7 +11,6 @@
 
 export type QuestionType = "MULTIPLE_CHOICE" | "OX" | "CODE_PREDICT" | "LINE_PICK" | "DESCRIPTIVE";
 
-export type Confidence = "SURE" | "UNSURE" | "UNKNOWN";
 
 /** LESSON: 레슨. DELAYED_CHECK: 오늘 예정된 지연 확인. PRACTICE: 연습(지연 확인 오답 뒤 다시 배우기). 일정은 바뀌지 않는다 */
 export type SubmissionMode = "LESSON" | "DELAYED_CHECK" | "PRACTICE";
@@ -35,8 +34,6 @@ export interface TodayCheck {
   dueDate: string;
   /** 배운 날 기준(같은 날 판정 문제 모두 정답)을 통과한 날 */
   learnedOn: string | null;
-  /** 지난 확인에서 확실했는데 틀려서 다음 날 다시 묻는 개념. 목록 맨 앞에 온다 */
-  sureWrong: boolean;
   question: QuestionView;
   /** 마지막(21일) 확인일 때만. 판정 문제를 맞혀 졸업한 뒤 동료에게 가르치듯 말해 볼 질문 (자기 채점, 판정에 쓰지 않음) */
   teach: TeachPrompt | null;
@@ -60,7 +57,6 @@ export interface ConceptStatus {
   graduated: boolean;
   learnedOn: string | null;
   dueDate: string | null;
-  sureWrong: boolean;
   graduatedAt: string | null;
   /** 지금까지 도달한 가장 높은 단계(0~4). 틀려서 stage가 내려가도 이 값은 줄지 않는다 */
   bestStage: number;
@@ -101,10 +97,6 @@ export interface Report {
   stages: { learning: number; passed1: number; passed2: number; passed3: number; graduated: number };
   /** 지금까지 낸 답 수 */
   retrievals: number;
-  /** 확실 → 애매 → 모름 순서 */
-  confidence: ({ confidence: Confidence } & Rate)[];
-  /** 지난 확인에서 확실했는데 틀린 개념 수 */
-  sureWrong: number;
   /** 최근 26주 동안 답을 낸 날과 그날 낸 답 수. 답이 없는 날은 빠진다 */
   activity: { date: string; count: number }[];
 }
@@ -134,7 +126,6 @@ export interface SubmitRequest {
   questionVersionId: number;
   /** 객관식·코드 예측: 보기 번호(1부터). OX: O 또는 X. 줄 고르기: "4" 또는 "7,8" */
   selected: string;
-  confidence: Confidence;
   mode: SubmissionMode;
 }
 
@@ -144,7 +135,6 @@ export interface SubmissionResult {
   correct: boolean;
   selected: string;
   answer: string;
-  confidence: Confidence;
   explanation: string;
   sourceUrl: string | null;
   delayedCheck: boolean;

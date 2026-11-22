@@ -62,7 +62,7 @@ class SubmissionService {
         // 제출 기록을 먼저 넣는다. 같은 제출이 동시에 오면 여기서 유니크 제약에 걸려 뒤의 작업을 하지 않는다
         AnswerSubmission submission = submissions.saveAndFlush(new AnswerSubmission(
                 userId, question.versionId(), request.clientSubmissionId(), selected,
-                request.confidence(), correct, delayedCheck, firstAttempt, today, now));
+                correct, delayedCheck, firstAttempt, today, now));
 
         int bestBefore = progresses.bestStage(userId, question.conceptId());
         if (mode == SubmissionMode.PRACTICE) {
@@ -74,8 +74,7 @@ class SubmissionService {
             ConceptProgresses.Scheduled scheduled = progresses.lockDue(userId, question.conceptId(), today)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                             "이 개념은 오늘 지연 확인이 예정되어 있지 않다"));
-            ReviewSchedule.Next next =
-                    ReviewSchedule.afterCheck(scheduled.stage(), correct, request.confidence(), today);
+            ReviewSchedule.Next next = ReviewSchedule.afterCheck(scheduled.stage(), correct, today);
             progresses.recordCheck(userId, question.conceptId(), scheduled, next, correct, question.versionId(), now);
         } else {
             progresses.recordLessonAnswer(userId, question.conceptId(), correct, today, now);
@@ -106,7 +105,6 @@ class SubmissionService {
                 submission.isCorrect(),
                 submission.getSelected(),
                 question.answer(),
-                submission.getConfidence(),
                 question.explanation(),
                 question.sourceUrl(),
                 submission.isDelayedCheck(),

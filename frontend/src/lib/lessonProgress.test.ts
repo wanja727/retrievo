@@ -15,7 +15,6 @@ function concept(lessonId: number, patch: Partial<ConceptStatus>): ConceptStatus
     graduated: false,
     learnedOn: "2026-11-15",
     dueDate: "2026-11-18",
-    sureWrong: false,
     graduatedAt: null,
     bestStage: 1,
     ...patch,
@@ -40,18 +39,18 @@ describe("lessonProgress", () => {
       [lesson(1)],
       [
         concept(1, { conceptId: 1, stage: 3, dueDate: "2026-11-30" }),
-        concept(1, { conceptId: 2, stage: 1, dueDate: "2026-11-20", sureWrong: true }),
+        concept(1, { conceptId: 2, stage: 1, dueDate: "2026-11-20" }),
         concept(1, { conceptId: 3, stage: 4, graduated: true, dueDate: null }),
       ],
     );
-    expect(p).toMatchObject({ state: "managed", passed: 1, dueDate: "2026-11-20", sureWrong: true });
+    expect(p).toMatchObject({ state: "managed", passed: 1, dueDate: "2026-11-20" });
   });
 });
 
 describe("nextCheckLabel", () => {
   const managed = (patch: Partial<ConceptStatus>) => lessonProgress([lesson(1)], [concept(1, patch)])[0];
 
-  it("언제 다시 묻는지와 그 이유를 보여준다", () => {
+  it("언제 다시 묻는지 보여준다", () => {
     expect(nextCheckLabel(managed({ stage: 0, dueDate: null, learnedOn: null }), TODAY)).toBe(
       "같은 날 모두 맞히면 학습 완료",
     );
@@ -59,9 +58,6 @@ describe("nextCheckLabel", () => {
     expect(nextCheckLabel(managed({ dueDate: "2026-11-15" }), TODAY)).toBe("오늘 확인");
     expect(nextCheckLabel(managed({ stage: 2, dueDate: "2026-11-23" }), TODAY)).toBe("5일 뒤 확인");
     expect(nextCheckLabel(managed({ stage: 3, dueDate: "2026-11-30" }), TODAY)).toBe("12일 뒤 확인");
-    expect(nextCheckLabel(managed({ dueDate: "2026-11-19", sureWrong: true }), TODAY)).toBe(
-      "1일 뒤 확인, 틀렸던 개념",
-    );
   });
 
   it("확인일이 오늘이거나 지났으면 오늘 확인할 레슨이다", () => {
