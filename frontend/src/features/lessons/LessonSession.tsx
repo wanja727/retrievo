@@ -3,13 +3,20 @@
 import { SessionSkeleton } from "@/components/ui/SessionSkeleton";
 import { RecordChip } from "@/components/ui/Record";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BottomActions, PrimaryButton, TextButton } from "@/components/ui/buttons";
 import { CloseIcon, ExternalIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
 import { api } from "@/lib/api";
-import { isDueToday, lessonPageUrl, lessonProgress, nextCheckLabel, type LessonProgress } from "@/lib/lessonProgress";
+import {
+  isDueToday,
+  lessonPageUrl,
+  lessonProgress,
+  lessonSiteOrigin,
+  nextCheckLabel,
+  type LessonProgress,
+} from "@/lib/lessonProgress";
 import { serviceDate } from "@/lib/schedule";
 import { useRemote } from "@/lib/useRemote";
 import { RetrySolve, type RetrySummary } from "../solve/RetrySolve";
@@ -37,6 +44,23 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   const [phaseState, setPhase] = useState<Phase | null>(null);
   const [round, setRound] = useState(0);
   const [summary, setSummary] = useState<RetrySummary | null>(null);
+  /**
+   * 본문을 아래로 읽는 동안에는 하단 바를 숨긴다. 위로 올리거나 본문 끝에 닿으면 다시 보인다.
+   * 본문은 다른 사이트의 페이지라 스크롤을 직접 볼 수 없어서, 레슨 페이지가 postMessage로 알려 준다.
+   * 신호가 오지 않으면(예전 레슨 페이지) 바는 계속 보인다
+   */
+  const [barHidden, setBarHidden] = useState(false);
+  useEffect(() => {
+    const origin = lessonSiteOrigin();
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== origin) return;
+      const data = e.data as { source?: unknown; type?: unknown; hide?: unknown } | null;
+      if (!data || data.source !== "dev-lessons" || data.type !== "bar") return;
+      setBarHidden(data.hide === true);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   if (load.status === "loading") {
     return <SessionSkeleton />;
@@ -56,44 +80,47 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   };
 
   if (phase === "intro") {
-    // 본문은 레슨 사이트의 페이지를 앱 안에 그대로 띄운다. 본문만 스크롤되고 닫기와 문제 풀기 버튼은 늘 보인다
+    // 본문은 레슨 사이트의 페이지를 앱 안에 그대로 띄운다. 본문이 화면 전체를 쓰고, 닫기와 문제 풀기는 본문 위에 뜨는 아래 한 줄에 둔다.
+    // 하단 바는 아래로 읽는 동안 숨는다 (barHidden). 레슨 페이지는 바에 가리지 않게 끝에 여백을 둔다.
+    // 높이는 fixed inset-0으로 잡는다. dvh를 모르는 브라우저(일부 인앱 브라우저)에서도 본문이 잘리지 않는다.
+    // 새 탭에서 크게 보기는 화면이 넓을 때만 보인다 (좁은 화면에서는 이미 화면을 다 쓴다)
     return (
-      <main className="app-frame h-dvh">
-        <header className="grid h-14 shrink-0 grid-cols-[44px_1fr_44px] items-center px-3">
-          <Link href="/lessons" aria-label="닫기" className="flex size-11 items-center justify-center">
-            <CloseIcon />
-          </Link>
-          <div className="truncate text-center text-[13px] font-medium text-muted">
-            {lesson.unit} <span className="text-ink">{lesson.title}</span>
-          </div>
-          <a
-            href={lessonPageUrl(lesson.key)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="레슨 본문을 새 탭에서 크게 보기"
-            className="flex size-11 items-center justify-center text-muted"
-          >
-            <ExternalIcon />
-          </a>
-        </header>
+      <main className="fixed inset-0 mx-auto w-full max-w-[430px] overflow-hidden bg-white">
         <iframe
           src={lessonPageUrl(lesson.key, true)}
           title={`${lesson.title} 레슨 본문`}
-          className="min-h-0 w-full flex-1 border-t border-line bg-white"
+          className="h-full w-full border-0 bg-white"
         />
-        <div className="bottom-bar shrink-0 px-6 pt-4 pb-6">
-          {learned && (
-            <p className="pb-2 text-center text-[13px] text-muted">
-              이미 배운 레슨이에요. 다시 풀어도 확인 일정은 바뀌지 않아요.
-            </p>
-          )}
-          <PrimaryButton onClick={start} disabled={questions.length === 0}>
+        <div
+          className={`bottom-bar absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out motion-reduce:transition-none ${
+            barHidden ? "translate-y-full" : ""
+          }`}
+          // 숨겨진 동안에는 키보드와 화면 낭독기도 지나치게 한다
+          inert={barHidden}
+        >
+          <Link
+            href="/lessons"
+            aria-label="닫기"
+            className="tile flex size-12 shrink-0 items-center justify-center rounded-full text-sub"
+          >
+            <CloseIcon />
+          </Link>
+          <PrimaryButton onClick={start} disabled={questions.length === 0} className="h-12! min-w-0 flex-1 text-[15px]!">
             {questions.length === 0
               ? "아직 풀 문제가 없어요"
               : learned
                 ? "다시 풀어 보기"
                 : `다 읽었으면 문제 ${questions.length}개 풀기`}
           </PrimaryButton>
+          <a
+            href={lessonPageUrl(lesson.key)}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="레슨 본문을 새 탭에서 크게 보기"
+            className="tile hidden size-12 shrink-0 items-center justify-center rounded-full text-sub sm:flex"
+          >
+            <ExternalIcon />
+          </a>
         </div>
       </main>
     );

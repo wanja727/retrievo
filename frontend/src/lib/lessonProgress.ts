@@ -52,6 +52,11 @@ export function lessonProgress(lessons: LessonSummary[], concepts: ConceptStatus
 /** 레슨 사이트(dev-lessons) 주소. 로컬에서 사이트를 띄워 확인할 때만 NEXT_PUBLIC_LESSON_SITE로 바꾼다 */
 const LESSON_SITE = process.env.NEXT_PUBLIC_LESSON_SITE || "https://wanja727.github.io/dev-lessons";
 
+/** 레슨 사이트의 출처(origin). 레슨 본문이 보낸 메시지가 맞는지 확인할 때 쓴다 */
+export function lessonSiteOrigin(): string {
+  return new URL(LESSON_SITE).origin;
+}
+
 /**
  * 레슨 본문 페이지. 본문은 dev-lessons 사이트에 있고 앱은 그 페이지를 iframe으로 띄운다.
  * embed를 주면 앱 안 화면용 주소다 (사이트 이동 링크를 숨기고 바깥 링크는 새 탭으로 연다).
