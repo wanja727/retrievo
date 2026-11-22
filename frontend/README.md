@@ -28,8 +28,8 @@ pnpm build
 | --- | --- |
 | `src/app/` | 라우트. `/` 오늘, `/check` 오늘의 지연 확인 |
 | `src/features/today/` | 오늘 화면, 첫 사용 안내 |
-| `src/features/check/` | 답 먼저 적기 → 보기와 확신도 → 해설 |
-| `src/components/ui/` | 버튼, 기억 기록 표시, 코드 블록, 확신도 탭, 하단 메뉴 |
+| `src/features/check/` | 보기 → 해설 |
+| `src/components/ui/` | 버튼, 기억 기록 표시, 코드 블록, 하단 메뉴 |
 | `src/lib/api/` | API 타입(백엔드 record와 같은 형식), 실제 클라이언트, 목 API |
 | `src/lib/highlight.ts` | 코드 문제용 Java 신택스 하이라이터 |
 

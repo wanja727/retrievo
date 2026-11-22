@@ -11,12 +11,12 @@ import java.time.LocalDate;
  *       3일 뒤 첫 재확인을 잡는다
  *   <li>재확인에서 틀리면 그날 같은 개념의 다른 문제를 맞힐 때까지 연습으로 다시 배운다(일정은 바꾸지 않는다)
  *   <li>재확인을 맞히면 다음 단계. 간격은 3일 → 4일 → 14일이라, 제때 확인하면 배운 날부터 3일·7일·21일 뒤가 된다
- *   <li>틀리면 한 단계 돌아간다(1단계 아래로는 내려가지 않는다). 확실했는데 틀렸으면 다음 날 먼저 다시 묻는다
+ *   <li>틀리면 한 단계 돌아가고 그 단계의 간격으로 다시 묻는다(1단계 아래로는 내려가지 않는다)
  *   <li>4단계(재확인 세 번 통과)면 졸업. 더는 묻지 않는다
  * </ul>
  *
  * 근거: 첫 세션에서 맞힐 때까지 + 넓은 간격의 재학습(successive relearning, Rawson &amp; Dunlosky 2011·2022),
- * 간격을 늘리든 일정하게 두든 차이 없고 총 간격이 중요(Latimier 외 2021), 확신했던 오답의 교정(Butterfield &amp; Metcalfe 2001).
+ * 간격을 늘리든 일정하게 두든 차이 없고 총 간격이 중요(Latimier 외 2021).
  * 3·7·21일이라는 날짜 자체는 직접 정한 값이다.
  */
 final class ReviewSchedule {
@@ -30,14 +30,12 @@ final class ReviewSchedule {
     static boolean learnedToday(int judgmentQuestions, int correctToday) {
         return judgmentQuestions > 0 && correctToday >= judgmentQuestions;
     }
-    /** 확실했는데 틀린 개념은 다음 날 다시 묻는다 */
-    static final int SURE_WRONG_GAP_DAYS = 1;
 
     private ReviewSchedule() {
     }
 
     /** 확인 뒤 상태. 졸업했으면 dueDate는 null */
-    record Next(int stage, LocalDate dueDate, boolean sureWrong) {
+    record Next(int stage, LocalDate dueDate) {
 
         boolean graduated() {
             return stage == GRADUATED;
@@ -56,24 +54,21 @@ final class ReviewSchedule {
 
     /** 배운 날 기준을 통과했을 때 */
     static Next learned(LocalDate today) {
-        return new Next(1, today.plusDays(gapDays(1)), false);
+        return new Next(1, today.plusDays(gapDays(1)));
     }
 
     /** 재확인 결과에 따른 다음 상태. stage는 확인 전 단계(1~3) */
-    static Next afterCheck(int stage, boolean correct, Confidence confidence, LocalDate today) {
+    static Next afterCheck(int stage, boolean correct, LocalDate today) {
         if (stage < 1 || stage > 3) {
             throw new IllegalArgumentException("재확인 단계는 1~3이다: " + stage);
         }
         if (correct) {
             int next = stage + 1;
             return next == GRADUATED
-                    ? new Next(GRADUATED, null, false)
-                    : new Next(next, today.plusDays(gapDays(next)), false);
+                    ? new Next(GRADUATED, null)
+                    : new Next(next, today.plusDays(gapDays(next)));
         }
         int back = Math.max(1, stage - 1);
-        if (confidence == Confidence.SURE) {
-            return new Next(back, today.plusDays(SURE_WRONG_GAP_DAYS), true);
-        }
-        return new Next(back, today.plusDays(gapDays(back)), false);
+        return new Next(back, today.plusDays(gapDays(back)));
     }
 }

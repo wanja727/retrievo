@@ -1,9 +1,8 @@
 "use client";
 
 import { CodeBlock, type LineMark } from "@/components/ui/CodeBlock";
-import { ConfidenceTabs } from "@/components/ui/ConfidenceTabs";
 import { CheckIcon } from "@/components/ui/icons";
-import type { Confidence, QuestionView } from "@/lib/api";
+import type { QuestionView } from "@/lib/api";
 import { formatLines, parseLines } from "@/lib/grading";
 
 const LETTERS = "ABCDEFGH";
@@ -12,17 +11,13 @@ export function ChooseStep({
   question: q,
   context,
   selected,
-  confidence,
   onSelect,
-  onConfidence,
 }: {
   question: QuestionView;
   /** 질문 위에 작게 보이는 맥락. 예: "JPA N+1 문제, 틀렸던 문제 다시" */
   context: string;
   selected: string | null;
-  confidence: Confidence | null;
   onSelect: (selected: string | null) => void;
-  onConfidence: (confidence: Confidence) => void;
 }) {
   return (
     <div className="pb-4">
@@ -46,13 +41,6 @@ export function ChooseStep({
         </>
       )}
 
-      <div className="mx-6 mt-9">
-        <h2 className="text-[13px] font-medium text-muted">이 답, 얼마나 확실한가요?</h2>
-        <div className="mt-3">
-          <ConfidenceTabs value={confidence} onChange={onConfidence} />
-        </div>
-        <p className="mt-3 text-[13px] leading-relaxed text-soft">확실하다고 했는데 틀리면 따로 모아 다시 물어봐요.</p>
-      </div>
     </div>
   );
 }

@@ -43,25 +43,20 @@ public class ReportController {
     public record Stages(int learning, int passed1, int passed2, int passed3, int graduated) {
     }
 
-    public record ConfidenceRate(Confidence confidence, int correct, int total) {
-    }
-
     public record DayCount(LocalDate date, int count) {
     }
 
     /**
-     * retrievals: 지금까지 낸 답 수(꺼낸 횟수). sureWrong: 지난 확인에서 확실했는데 틀린 개념 수.
+     * retrievals: 지금까지 낸 답 수(꺼낸 횟수).
      * activity: 최근 26주 동안 답을 낸 날과 그날 낸 답 수 (답이 없는 날은 빠진다)
      */
-    public record Report(LocalDate today, Curve curve, Stages stages, int retrievals, List<ConfidenceRate> confidence,
-            int sureWrong, List<DayCount> activity) {
+    public record Report(LocalDate today, Curve curve, Stages stages, int retrievals, List<DayCount> activity) {
     }
 
     @GetMapping("/api/me/report")
     public Report report(@CurrentUser long userId) {
         LocalDate today = ServiceDates.today(clock);
-        return new Report(today, curve(userId), stages(userId), retrievals(userId), confidence(userId),
-                sureWrong(userId), activity(userId, today));
+        return new Report(today, curve(userId), stages(userId), retrievals(userId), activity(userId, today));
     }
 
     private Curve curve(long userId) {
@@ -99,29 +94,6 @@ public class ReportController {
 
     private int retrievals(long userId) {
         return jdbc.sql("select count(*) from answer_submission where user_id = ?")
-                .param(userId).query(Integer.class).single();
-    }
-
-    private List<ConfidenceRate> confidence(long userId) {
-        List<ConfidenceRate> found = jdbc.sql("""
-                        select confidence, count(*) filter (where correct) as correct, count(*) as total
-                        from answer_submission
-                        where user_id = ? and first_attempt
-                        group by confidence
-                        """)
-                .param(userId)
-                .query((rs, n) -> new ConfidenceRate(
-                        Confidence.valueOf(rs.getString("confidence")), rs.getInt("correct"), rs.getInt("total")))
-                .list();
-        // 확실 → 애매 → 모름 순서로, 답이 없는 확신도도 0으로 채운다
-        return List.of(Confidence.values()).stream()
-                .map(c -> found.stream().filter(f -> f.confidence() == c).findFirst()
-                        .orElse(new ConfidenceRate(c, 0, 0)))
-                .toList();
-    }
-
-    private int sureWrong(long userId) {
-        return jdbc.sql("select count(*) from concept_progress where user_id = ? and sure_wrong")
                 .param(userId).query(Integer.class).single();
     }
 

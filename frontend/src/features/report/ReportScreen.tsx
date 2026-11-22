@@ -1,10 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { BottomNav } from "@/components/ui/BottomNav";
-import { ArrowRightIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
-import { CONFIDENCE_LABEL } from "@/components/ui/ConfidenceTabs";
 import { api, type Home, type Report } from "@/lib/api";
 import { activityGrid, activityLevel, percent } from "@/lib/report";
 import { useRemote } from "@/lib/useRemote";
@@ -51,7 +48,6 @@ function ReportBody({ report, home }: { report: Report; home: Home }) {
       <CurveSection report={report} />
       <ActivitySection report={report} />
       <StageSection report={report} />
-      <ConfidenceSection report={report} />
     </div>
   );
 }
@@ -267,50 +263,6 @@ function StageSection({ report }: { report: Report }) {
           </div>
         ))}
       </div>
-    </section>
-  );
-}
-
-/** 확신과 실제: 확신도별 실제 정답률. 확실했는데 틀린 개념은 레슨 화면에서 따로 보인다 */
-function ConfidenceSection({ report }: { report: Report }) {
-  const sure = report.confidence.find((c) => c.confidence === "SURE");
-  const sureRate = sure ? percent(sure) : null;
-  return (
-    <section className="card mx-4 mt-4 px-5 py-5" aria-labelledby="confidence-title">
-      <SectionTitle id="confidence-title">확신과 실제</SectionTitle>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-        {sureRate === null
-          ? "답을 낼 때 고른 확신도별로 실제 정답률을 보여줘요."
-          : `확신도별 실제 정답률이에요. 확실하다고 한 답의 ${100 - sureRate}%는 틀렸어요.`}
-      </p>
-      <div className="mt-4 flex flex-col gap-2.5">
-        {report.confidence.map((c) => {
-          const p = percent(c);
-          return (
-            <div key={c.confidence} className="grid grid-cols-[40px_1fr_64px] items-center gap-3">
-              <span className="text-[13px] text-muted">{CONFIDENCE_LABEL[c.confidence]}</span>
-              <div className="h-2 rounded-full bg-line">
-                <div className="bar-fill h-full rounded-full" style={{ width: `${p ?? 0}%` }} />
-              </div>
-              <span className="text-right text-[13px]">
-                {p === null ? <span className="text-faint">답 없음</span> : <b className="font-semibold">{p}%</b>}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      {report.sureWrong > 0 && (
-        <Link
-          href="/lessons"
-          className="mt-5 flex h-12 items-center justify-between rounded-2xl bg-wrong-soft px-4 text-[15px] font-medium text-wrong-ink"
-        >
-          <span className="flex items-center gap-2">
-            <span className="size-1.5 rounded-full bg-wrong" aria-hidden="true" />
-            확실했는데 틀린 개념 {report.sureWrong}개
-          </span>
-          <ArrowRightIcon size={16} />
-        </Link>
-      )}
     </section>
   );
 }

@@ -1,25 +1,12 @@
 import { CodeBlock, type LineMark } from "@/components/ui/CodeBlock";
-import { CONFIDENCE_LABEL } from "@/components/ui/ConfidenceTabs";
 import { RecordUp } from "@/components/ui/Record";
 import type { QuestionView, SubmissionResult } from "@/lib/api";
 import { describeAnswer, parseLines } from "@/lib/grading";
-
-/** 결과에 붙이는 안내. 확신과 결과가 어긋난 경우에만 보여준다 */
-function noteFor(result: SubmissionResult): string | null {
-  if (!result.correct && result.confidence === "SURE") {
-    return "확실했는데 틀린 답이에요. 이런 개념은 따로 모아 먼저 다시 물어요.";
-  }
-  if (result.correct && result.confidence !== "SURE") {
-    return "확신 없이 맞힌 답은 잘 남지 않아요. 해설을 한 번 더 읽어 두세요.";
-  }
-  return null;
-}
 
 export function ResultStep({ question: q, result }: { question: QuestionView; result: SubmissionResult }) {
   const answer = describeAnswer(q.type, result.answer, q.choices);
   const mine = describeAnswer(q.type, result.selected, q.choices);
   const big = answer.length <= 4;
-  const note = noteFor(result);
 
   const marks: Record<number, LineMark> = {};
   if (q.type === "LINE_PICK") {
@@ -49,7 +36,7 @@ export function ResultStep({ question: q, result }: { question: QuestionView; re
             {answer}
           </h1>
           <div className={`text-[15px] leading-relaxed text-muted ${big ? "pb-2" : ""}`}>
-            내 답 {result.correct ? mine : <s className="text-faint">{mine}</s>}, {CONFIDENCE_LABEL[result.confidence]}
+            내 답 {result.correct ? mine : <s className="text-faint">{mine}</s>}
             <span className="mt-0.5 block text-soft">{result.retrievals.toLocaleString("ko-KR")}번째로 꺼낸 답</span>
           </div>
         </div>
@@ -58,16 +45,6 @@ export function ResultStep({ question: q, result }: { question: QuestionView; re
       {result.record && (
         <div className="mx-6 mt-6">
           <RecordUp before={result.record.before} after={result.record.after} />
-        </div>
-      )}
-
-      {note && (
-        <div
-          className={`mx-6 mt-4 rounded-2xl px-4 py-3.5 text-[13px] leading-relaxed ${
-            result.correct ? "tile text-sub" : "bg-wrong-soft/80 text-wrong-ink"
-          }`}
-        >
-          {note}
         </div>
       )}
 

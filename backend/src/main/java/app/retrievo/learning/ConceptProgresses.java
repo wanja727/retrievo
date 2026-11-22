@@ -22,13 +22,12 @@ class ConceptProgresses {
     }
 
     /** 오늘 확인할 개념. learnedOn은 배운 날 기준을 통과한 날 */
-    record Due(long conceptId, String conceptName, int stage, LocalDate dueDate, LocalDate learnedOn,
-            boolean sureWrong) {
+    record Due(long conceptId, String conceptName, int stage, LocalDate dueDate, LocalDate learnedOn) {
     }
 
     /** 개념 하나의 진행 상태 (레슨·기록 화면용). bestStage는 지금까지 도달한 가장 높은 단계 (ADR-025) */
     record Progress(long conceptId, String conceptName, long lessonId, String lessonTitle, int stage, int bestStage,
-            LocalDate learnedOn, LocalDate dueDate, boolean sureWrong, Instant graduatedAt) {
+            LocalDate learnedOn, LocalDate dueDate, Instant graduatedAt) {
     }
 
     /**
@@ -74,7 +73,7 @@ class ConceptProgresses {
             jdbc.sql("""
                             update concept_progress
                             set stage = ?, best_stage = greatest(best_stage, ?), learned_on = ?, due_date = ?,
-                                sure_wrong = false, updated_at = ?
+                                updated_at = ?
                             where user_id = ? and concept_id = ?
                             """)
                     .params(next.stage(), next.stage(), today, next.dueDate(), Timestamp.from(now), userId, conceptId)
@@ -103,12 +102,11 @@ class ConceptProgresses {
             long questionVersionId, Instant now) {
         jdbc.sql("""
                         update concept_progress
-                        set stage = ?, best_stage = greatest(best_stage, ?), due_date = ?, sure_wrong = ?,
-                            updated_at = ?,
+                        set stage = ?, best_stage = greatest(best_stage, ?), due_date = ?, updated_at = ?,
                             graduated_at = case when ? then ? else graduated_at end
                         where user_id = ? and concept_id = ?
                         """)
-                .params(next.stage(), next.stage(), next.dueDate(), next.sureWrong(), Timestamp.from(now),
+                .params(next.stage(), next.stage(), next.dueDate(), Timestamp.from(now),
                         next.graduated(), Timestamp.from(now), userId, conceptId)
                 .update();
         jdbc.sql("""
@@ -121,19 +119,18 @@ class ConceptProgresses {
                 .update();
     }
 
-    /** 오늘 확인할 개념. 확실했는데 틀린 개념을 먼저, 그다음 오래 밀린 순 */
+    /** 오늘 확인할 개념. 오래 밀린 순 */
     List<Due> due(long userId, LocalDate today) {
         return jdbc.sql("""
-                        select p.concept_id, c.name, p.stage, p.due_date, p.learned_on, p.sure_wrong
+                        select p.concept_id, c.name, p.stage, p.due_date, p.learned_on
                         from concept_progress p join concept c on c.id = p.concept_id
                         where p.user_id = ? and p.due_date <= ?
-                        order by p.sure_wrong desc, p.due_date, p.concept_id
+                        order by p.due_date, p.concept_id
                         """)
                 .params(userId, today)
                 .query((rs, n) -> new Due(
                         rs.getLong("concept_id"), rs.getString("name"), rs.getInt("stage"),
-                        rs.getObject("due_date", LocalDate.class), rs.getObject("learned_on", LocalDate.class),
-                        rs.getBoolean("sure_wrong")))
+                        rs.getObject("due_date", LocalDate.class), rs.getObject("learned_on", LocalDate.class)))
                 .list();
     }
 
@@ -141,7 +138,7 @@ class ConceptProgresses {
     List<Progress> all(long userId) {
         return jdbc.sql("""
                         select p.concept_id, c.name, l.id as lesson_id, l.title as lesson_title, p.stage,
-                               p.best_stage, p.learned_on, p.due_date, p.sure_wrong, p.graduated_at
+                               p.best_stage, p.learned_on, p.due_date, p.graduated_at
                         from concept_progress p
                         join concept c on c.id = p.concept_id
                         join lesson l on l.id = c.lesson_id
@@ -156,7 +153,7 @@ class ConceptProgresses {
                             rs.getLong("concept_id"), rs.getString("name"), rs.getLong("lesson_id"),
                             rs.getString("lesson_title"), rs.getInt("stage"), rs.getInt("best_stage"),
                             rs.getObject("learned_on", LocalDate.class), rs.getObject("due_date", LocalDate.class),
-                            rs.getBoolean("sure_wrong"), graduatedAt == null ? null : graduatedAt.toInstant());
+                            graduatedAt == null ? null : graduatedAt.toInstant());
                 })
                 .list();
     }

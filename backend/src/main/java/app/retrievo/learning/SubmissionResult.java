@@ -11,7 +11,6 @@ public record SubmissionResult(
         boolean correct,
         String selected,
         String answer,
-        Confidence confidence,
         String explanation,
         String sourceUrl,
         boolean delayedCheck,

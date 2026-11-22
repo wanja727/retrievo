@@ -16,7 +16,6 @@ export interface LessonProgress {
   passed: number;
   /** 다음 확인일. 개념이 여럿이면 가장 가까운 날 */
   dueDate: string | null;
-  sureWrong: boolean;
   /** 이 레슨의 기억 기록: 개념들이 도달한 가장 높은 단계 가운데 가장 낮은 값(0~4). 줄지 않는다 */
   best: number;
 }
@@ -30,12 +29,12 @@ export function lessonProgress(lessons: LessonSummary[], concepts: ConceptStatus
   return lessons.map((lesson) => {
     const cs = byLesson.get(lesson.id) ?? [];
     if (cs.length === 0) {
-      return { lesson, state: "new", passed: 0, dueDate: null, sureWrong: false, best: 0 };
+      return { lesson, state: "new", passed: 0, dueDate: null, best: 0 };
     }
     const best = Math.min(...cs.map((c) => c.bestStage));
     const open = cs.filter((c) => !c.graduated);
     if (open.length === 0) {
-      return { lesson, state: "graduated", passed: TOTAL_CHECKS, dueDate: null, sureWrong: false, best };
+      return { lesson, state: "graduated", passed: TOTAL_CHECKS, dueDate: null, best };
     }
     const dues = open.map((c) => c.dueDate).filter((d): d is string => d !== null);
     return {
@@ -43,7 +42,6 @@ export function lessonProgress(lessons: LessonSummary[], concepts: ConceptStatus
       state: "managed",
       passed: Math.min(...open.map((c) => c.stage)),
       dueDate: dues.length ? dues.reduce((a, b) => (a < b ? a : b)) : null,
-      sureWrong: open.some((c) => c.sureWrong),
       best,
     };
   });
@@ -73,12 +71,11 @@ export function byNextCheck(a: LessonProgress, b: LessonProgress): number {
   return a.dueDate < b.dueDate ? -1 : 1;
 }
 
-/** 관리 중인 레슨 한 줄 설명: 언제 다시 묻는지와 그 이유 */
+/** 관리 중인 레슨 한 줄 설명: 언제 다시 묻는지 */
 export function nextCheckLabel(p: LessonProgress, today: string): string {
   if (p.passed === 0 || p.dueDate === null) return "같은 날 모두 맞히면 학습 완료";
   const days = daysBetween(today, p.dueDate);
   const when = days <= 0 ? "오늘 확인" : `${days}일 뒤 확인`;
-  if (p.sureWrong) return `${when}, 틀렸던 개념`;
   return when;
 }
 

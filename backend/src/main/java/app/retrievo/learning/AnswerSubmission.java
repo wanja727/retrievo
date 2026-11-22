@@ -2,8 +2,6 @@ package app.retrievo.learning;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -28,9 +26,6 @@ public class AnswerSubmission {
 
     private String selected;
 
-    @Enumerated(EnumType.STRING)
-    private Confidence confidence;
-
     private boolean correct;
 
     @Column(name = "is_delayed_check")
@@ -47,13 +42,11 @@ public class AnswerSubmission {
     }
 
     public AnswerSubmission(Long userId, Long questionVersionId, UUID clientSubmissionId, String selected,
-            Confidence confidence, boolean correct, boolean delayedCheck, boolean firstAttempt, LocalDate serviceDate,
-            Instant submittedAt) {
+            boolean correct, boolean delayedCheck, boolean firstAttempt, LocalDate serviceDate, Instant submittedAt) {
         this.userId = userId;
         this.questionVersionId = questionVersionId;
         this.clientSubmissionId = clientSubmissionId;
         this.selected = selected;
-        this.confidence = confidence;
         this.correct = correct;
         this.delayedCheck = delayedCheck;
         this.firstAttempt = firstAttempt;
@@ -79,10 +72,6 @@ public class AnswerSubmission {
 
     public String getSelected() {
         return selected;
-    }
-
-    public Confidence getConfidence() {
-        return confidence;
     }
 
     public boolean isCorrect() {

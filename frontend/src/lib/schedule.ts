@@ -20,8 +20,7 @@ export function daysBetween(from: string, to: string): number {
 }
 
 /** 오늘 이 개념을 묻는 이유 */
-export function checkReason(check: Pick<TodayCheck, "attemptNo" | "dueDate" | "learnedOn" | "sureWrong">): string {
-  if (check.sureWrong) return "확실했는데 틀려서 다시 확인";
+export function checkReason(check: Pick<TodayCheck, "attemptNo" | "dueDate" | "learnedOn">): string {
   const nth = `${ORDINAL[check.attemptNo] ?? `${check.attemptNo}번째`} 재확인`;
   if (!check.learnedOn) return nth;
   return `배운 지 ${daysBetween(check.learnedOn, check.dueDate)}일, ${nth}`;
