@@ -5,6 +5,7 @@ import app.retrievo.content.QuestionPurpose;
 import app.retrievo.content.QuestionStatus;
 import app.retrievo.content.QuestionType;
 import app.retrievo.content.file.ContentFile.ConceptDef;
+import app.retrievo.content.file.ContentFile.CoreQuestionDef;
 import app.retrievo.content.file.ContentFile.QuestionDef;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -24,6 +25,8 @@ public final class ContentValidator {
     private static final Pattern KEY = Pattern.compile("[a-z0-9][a-z0-9-]*");
     private static final int MIN_JUDGMENT_PER_CONCEPT = 2;
     private static final int RECOMMENDED_CHECKLIST = 4;
+    /** 문제의 coreQuestion에 쓰는 값: 핵심 질문 전체를 아우르는 문제 */
+    public static final String ALL_CORE_QUESTIONS = "all";
 
     public record Result(List<String> errors, List<String> warnings) {
     }
@@ -90,6 +93,26 @@ public final class ContentValidator {
             }
         }
 
+        // 핵심 질문은 선택이다. 적은 파일은 모든 문제가 그중 하나(또는 all)에 묶여야 한다
+        Set<String> coreQuestionKeys = null;
+        if (file.coreQuestions() != null) {
+            coreQuestionKeys = new HashSet<>();
+            if (file.coreQuestions().isEmpty()) {
+                errors.add("coreQuestions가 비어 있다. 쓰지 않으려면 항목을 지운다");
+            }
+            for (int i = 0; i < file.coreQuestions().size(); i++) {
+                CoreQuestionDef c = file.coreQuestions().get(i);
+                String label = "coreQuestions[" + i + "]";
+                checkKey(label + ".key", c.key(), errors);
+                checkText(label + ".text", c.text(), errors);
+                if (ALL_CORE_QUESTIONS.equals(c.key())) {
+                    errors.add(label + ": '" + ALL_CORE_QUESTIONS + "'은 핵심 질문 전체를 뜻하는 값이라 키로 쓸 수 없다");
+                } else if (c.key() != null && !coreQuestionKeys.add(c.key())) {
+                    errors.add(label + ": 핵심 질문 키 '" + c.key() + "'가 중복이다");
+                }
+            }
+        }
+
         // 개념별 검수 완료 판정 문제 수 (지연 확인용)
         Map<String, Integer> reviewedJudgments = new LinkedHashMap<>();
         conceptKeys.forEach(k -> reviewedJudgments.put(k, 0));
@@ -102,6 +125,7 @@ public final class ContentValidator {
                 QuestionDef q = file.questions().get(i);
                 String label = "questions[" + i + "]" + (q.key() == null ? "" : " '" + q.key() + "'");
                 checkQuestion(label, q, conceptKeys, questionKeys, errors, warnings);
+                checkCoreQuestion(label, q, coreQuestionKeys, errors);
 
                 QuestionType type = typeOf(q.type());
                 if (type != null && type.purpose() == QuestionPurpose.JUDGMENT
@@ -208,6 +232,21 @@ public final class ContentValidator {
 
         if (status == QuestionStatus.REVIEWED && (q.source() == null || q.source().isBlank())) {
             warnings.add(label + ": 검수 완료 문제에 출처(source)가 없다");
+        }
+    }
+
+    private static void checkCoreQuestion(String label, QuestionDef q, Set<String> coreQuestionKeys,
+            List<String> errors) {
+        if (coreQuestionKeys == null) {
+            if (q.coreQuestion() != null) {
+                errors.add(label + ": coreQuestion을 쓰려면 파일에 coreQuestions가 있어야 한다");
+            }
+            return;
+        }
+        if (q.coreQuestion() == null) {
+            errors.add(label + ": coreQuestion이 없다. coreQuestions가 있는 파일은 모든 문제를 핵심 질문에 묶는다");
+        } else if (!ALL_CORE_QUESTIONS.equals(q.coreQuestion()) && !coreQuestionKeys.contains(q.coreQuestion())) {
+            errors.add(label + ": coreQuestion '" + q.coreQuestion() + "'가 coreQuestions에 없다");
         }
     }
 

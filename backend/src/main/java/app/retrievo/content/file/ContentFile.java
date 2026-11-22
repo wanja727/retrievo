@@ -10,6 +10,7 @@ public record ContentFile(
         SubjectDef subject,
         LessonDef lesson,
         List<ConceptDef> concepts,
+        List<CoreQuestionDef> coreQuestions,
         List<QuestionDef> questions,
         LessonSteps steps) {
 
@@ -22,9 +23,14 @@ public record ContentFile(
     public record ConceptDef(String key, String name) {
     }
 
+    /** 레슨의 핵심 질문. 문제가 어느 질문에서 나왔는지 묶는 데만 쓴다. 앱은 저장하지 않는다 */
+    public record CoreQuestionDef(String key, String text) {
+    }
+
     public record QuestionDef(
             String key,
             String concept,
+            String coreQuestion,
             String type,
             String status,
             Integer difficulty,

@@ -99,6 +99,32 @@ class ContentSetValidatorTest {
     }
 
     @Test
+    void 핵심_질문을_적은_파일은_모든_문제가_그중_하나에_묶여야_한다() {
+        String linked = LINE_PICK
+                .replace("questions:\n", "coreQuestions:\n  - {key: q1, text: 경쟁 상태가 생기는 이유}\nquestions:\n")
+                .replace("    concept: race\n", "    concept: race\n    coreQuestion: q1\n");
+        assertThat(errors(linked)).isEmpty();
+        assertThat(errors(linked.replace("coreQuestion: q1", "coreQuestion: all"))).isEmpty();
+
+        assertThat(errors(linked.replace("    coreQuestion: q1\n", "")))
+                .anyMatch(e -> e.contains("coreQuestion이 없다"));
+        assertThat(errors(linked.replace("coreQuestion: q1", "coreQuestion: q9")))
+                .anyMatch(e -> e.contains("'q9'가 coreQuestions에 없다"));
+        assertThat(errors(linked.replace("{key: q1,", "{key: all,")))
+                .anyMatch(e -> e.contains("키로 쓸 수 없다"));
+        assertThat(errors(linked.replace("  - {key: q1, text: 경쟁 상태가 생기는 이유}\n",
+                "  - {key: q1, text: 경쟁 상태가 생기는 이유}\n  - {key: q1, text: 막는 방법}\n")))
+                .anyMatch(e -> e.contains("핵심 질문 키 'q1'가 중복이다"));
+    }
+
+    @Test
+    void 핵심_질문이_없는_파일은_문제에_coreQuestion을_쓸_수_없다() {
+        assertThat(errors(LINE_PICK)).isEmpty();
+        assertThat(errors(LINE_PICK.replace("    concept: race\n", "    concept: race\n    coreQuestion: q1\n")))
+                .anyMatch(e -> e.contains("coreQuestions가 있어야 한다"));
+    }
+
+    @Test
     void 읽을_수_없는_파일도_다른_파일과_함께_결과에_담는다() throws IOException {
         Map<String, String> sources = new LinkedHashMap<>();
         sources.put("broken.yaml", "subject: [");
