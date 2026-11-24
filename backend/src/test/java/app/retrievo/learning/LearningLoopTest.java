@@ -589,6 +589,23 @@ class LearningLoopTest extends IntegrationTest {
     }
 
     @Test
+    void 이미_가져온_문제도_다시_가져올_때_배운_날_문제를_다시_정한다() throws Exception {
+        // 핵심 질문을 적기 전의 파일: 판정 문제 넷이 모두 배운 날 문제다
+        String before = CORE_QUESTIONS
+                .replaceAll("(?m)^coreQuestions:\n(  - .*\n)+", "")
+                .replaceAll(" coreQuestion: [a-z0-9]+,", "");
+        importer.importYaml("cq.yaml", before);
+        long cq = jdbc.queryForObject("select id from lesson where external_key = 'dev/cq'", Long.class);
+        assertThat(jdbc.queryForObject("select count(*) from question where lesson_id = ? and lesson_day and purpose = 'JUDGMENT' and status = 'REVIEWED'",
+                Integer.class, cq)).isEqualTo(4);
+
+        importer.importYaml("cq.yaml", CORE_QUESTIONS);
+
+        assertThat(jdbc.queryForList("select external_key from question where lesson_id = ? and lesson_day order by sort_order",
+                String.class, cq)).containsExactly("dev/cq/q1-book", "dev/cq/q2-book");
+    }
+
+    @Test
     void 핵심_질문이_없는_레슨은_판정_문제를_모두_배운_날에_묻는다() throws Exception {
         assertThat(jdbc.queryForObject(
                 "select count(*) from question where lesson_id = ? and purpose = 'JUDGMENT' and lesson_day",
