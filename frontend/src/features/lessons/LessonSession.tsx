@@ -3,9 +3,9 @@
 import { SessionSkeleton } from "@/components/ui/SessionSkeleton";
 import { RecordChip } from "@/components/ui/Record";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BottomActions, PrimaryButton, TextButton } from "@/components/ui/buttons";
-import { CloseIcon, ExternalIcon } from "@/components/ui/icons";
+import { CloseIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { SessionTopBar } from "@/components/ui/SessionTopBar";
 import { api } from "@/lib/api";
@@ -22,6 +22,13 @@ import { useRemote } from "@/lib/useRemote";
 import { RetrySolve, type RetrySummary } from "../solve/RetrySolve";
 
 type Phase = "intro" | "solve" | "done";
+
+/** 레슨 본문의 구역 하나가 시작하는 위치 (본문 맨 위에서부터의 px) */
+type Mark = { label: string; top: number };
+function isMark(m: unknown): m is Mark {
+  const v = m as { label?: unknown; top?: unknown } | null;
+  return !!v && typeof v.label === "string" && v.label.length <= 40 && typeof v.top === "number";
+}
 
 /**
  * 레슨 하나. 판정 문제를 모두 맞힐 때까지 묻는다. 틀린 문제는 다른 문제를 푼 뒤 다시 나온다.
@@ -45,22 +52,69 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   const [round, setRound] = useState(0);
   const [summary, setSummary] = useState<RetrySummary | null>(null);
   /**
-   * 본문을 아래로 읽는 동안에는 하단 바를 숨긴다. 위로 올리거나 본문 끝에 닿으면 다시 보인다.
-   * 본문은 다른 사이트의 페이지라 스크롤을 직접 볼 수 없어서, 레슨 페이지가 postMessage로 알려 준다.
-   * 신호가 오지 않으면(예전 레슨 페이지) 바는 계속 보인다
+   * 본문은 다른 사이트의 페이지라 앱이 그 안을 볼 수 없다. 레슨 페이지가 postMessage로 알려 준다.
+   * - height: 본문의 높이. iframe을 이 높이로 맞춘다. 그러면 본문이 iframe 안에서 따로 스크롤되지 않고
+   *   앱의 페이지 전체가 스크롤되어, 모바일 브라우저의 주소창이 접힌다
+   * - marks: 구역(예측, 질문 1...)이 시작하는 위치. 지금 읽는 곳을 보여 주는 데 쓴다
+   * - scroll: 본문 안의 #링크를 눌렀을 때 가야 할 위치
+   * - bar: 높이를 알려 주지 않는 예전 레슨 페이지가 보내는 신호. 하단 바를 숨길지 알려 준다
    */
+  const [frameHeight, setFrameHeight] = useState<number | null>(null);
+  const [marks, setMarks] = useState<Mark[]>([]);
+  const [where, setWhere] = useState("");
   const [barHidden, setBarHidden] = useState(false);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const progressRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     const origin = lessonSiteOrigin();
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== origin) return;
-      const data = e.data as { source?: unknown; type?: unknown; hide?: unknown } | null;
-      if (!data || data.source !== "dev-lessons" || data.type !== "bar") return;
-      setBarHidden(data.hide === true);
+      const data = e.data as { source?: unknown; type?: unknown; hide?: unknown; height?: unknown; top?: unknown; marks?: unknown } | null;
+      if (!data || data.source !== "dev-lessons") return;
+      if (data.type === "height" && typeof data.height === "number" && data.height >= 200 && data.height <= 200_000) {
+        setFrameHeight(Math.ceil(data.height));
+      } else if (data.type === "marks" && Array.isArray(data.marks)) {
+        setMarks(data.marks.slice(0, 12).filter(isMark));
+      } else if (data.type === "scroll" && typeof data.top === "number" && frameRef.current) {
+        const frameTop = frameRef.current.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(0, frameTop + data.top - 12), behavior: "smooth" });
+      } else if (data.type === "bar") {
+        setBarHidden(data.hide === true);
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+
+  /**
+   * iframe이 본문 높이에 맞춰진 뒤에는 앱의 스크롤로 진행 표시와 하단 바를 정한다.
+   * 아래로 읽는 동안에는 하단 바를 숨기고, 위로 올리거나 처음과 끝에 닿으면 다시 보인다
+   */
+  const fitted = frameHeight !== null;
+  useEffect(() => {
+    if (!fitted) return;
+    let lastY = window.scrollY;
+    const update = () => {
+      const y = window.scrollY;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (progressRef.current) progressRef.current.style.width = `${max > 0 ? Math.min(100, (y / max) * 100) : 0}%`;
+      const frameTop = frameRef.current ? frameRef.current.getBoundingClientRect().top : 0;
+      let label = "";
+      for (const m of marks) if (frameTop + m.top < window.innerHeight * 0.4) label = m.label;
+      setWhere(label);
+      const dir = y > lastY + 6 ? "down" : y < lastY - 6 ? "up" : "";
+      if (dir) lastY = y;
+      if (y < 40 || max - y < 160) setBarHidden(false);
+      else if (dir) setBarHidden(dir === "down");
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [fitted, marks, frameHeight]);
 
   if (load.status === "loading") {
     return <SessionSkeleton />;
@@ -80,47 +134,53 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
   };
 
   if (phase === "intro") {
-    // 본문은 레슨 사이트의 페이지를 앱 안에 그대로 띄운다. 본문이 화면 전체를 쓰고, 닫기와 문제 풀기는 본문 위에 뜨는 아래 한 줄에 둔다.
-    // 하단 바는 아래로 읽는 동안 숨는다 (barHidden). 레슨 페이지는 바에 가리지 않게 끝에 여백을 둔다.
-    // 높이는 fixed inset-0으로 잡는다. dvh를 모르는 브라우저(일부 인앱 브라우저)에서도 본문이 잘리지 않는다.
-    // 새 탭에서 크게 보기는 화면이 넓을 때만 보인다 (좁은 화면에서는 이미 화면을 다 쓴다)
+    // 본문은 레슨 사이트의 페이지를 앱 안에 그대로 띄운다. 본문이 화면 폭을 다 쓰고(넓은 화면에서는 넓게),
+    // 닫기와 문제 풀기는 화면 아래에 붙은 한 줄에 둔다. 하단 바는 아래로 읽는 동안 숨는다 (barHidden).
+    // iframe의 높이는 레슨 페이지가 알려 준 본문 높이다. 알려 주기 전에는 화면 높이로 두고 그 안에서 스크롤한다
     return (
-      <main className="fixed inset-0 mx-auto w-full max-w-[430px] overflow-hidden bg-white">
+      <main className="relative min-h-dvh w-full bg-white">
+        {fitted && (
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-20 h-[3px]" aria-hidden="true">
+            <span ref={progressRef} className="block h-full w-0 rounded-r-[3px] bg-accent" />
+          </div>
+        )}
+        {fitted && where && (
+          <div className="pointer-events-none fixed top-3 right-3 z-20 rounded-full border border-line bg-white/90 px-[11px] py-[3px] text-[12.5px] font-semibold text-muted backdrop-blur-sm">
+            {where}
+          </div>
+        )}
         <iframe
+          ref={frameRef}
           src={lessonPageUrl(lesson.key, true)}
           title={`${lesson.title} 레슨 본문`}
-          className="h-full w-full border-0 bg-white"
+          className="block w-full border-0 bg-white"
+          style={{ height: fitted ? `${frameHeight}px` : "100dvh" }}
+          scrolling={fitted ? "no" : undefined}
         />
         <div
-          className={`bottom-bar absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out motion-reduce:transition-none ${
+          className={`bottom-bar fixed inset-x-0 bottom-0 z-10 px-4 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out motion-reduce:transition-none ${
             barHidden ? "translate-y-full" : ""
           }`}
           // 숨겨진 동안에는 키보드와 화면 낭독기도 지나치게 한다
           inert={barHidden}
         >
-          <Link
-            href="/lessons"
-            aria-label="닫기"
-            className="tile flex size-12 shrink-0 items-center justify-center rounded-full text-sub"
-          >
-            <CloseIcon />
-          </Link>
-          <PrimaryButton onClick={start} disabled={questions.length === 0} className="h-12! min-w-0 flex-1 text-[15px]!">
-            {questions.length === 0
-              ? "아직 풀 문제가 없어요"
-              : learned
-                ? "다시 풀어 보기"
-                : `다 읽었으면 문제 ${questions.length}개 풀기`}
-          </PrimaryButton>
-          <a
-            href={lessonPageUrl(lesson.key)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="레슨 본문을 새 탭에서 크게 보기"
-            className="tile hidden size-12 shrink-0 items-center justify-center rounded-full text-sub sm:flex"
-          >
-            <ExternalIcon />
-          </a>
+          {/* 넓은 화면에서도 버튼은 가운데에 손에 닿는 폭으로 둔다 */}
+          <div className="mx-auto flex w-full max-w-[560px] items-center gap-2">
+            <Link
+              href="/lessons"
+              aria-label="닫기"
+              className="tile flex size-12 shrink-0 items-center justify-center rounded-full text-sub"
+            >
+              <CloseIcon />
+            </Link>
+            <PrimaryButton onClick={start} disabled={questions.length === 0} className="h-12! min-w-0 flex-1 text-[15px]!">
+              {questions.length === 0
+                ? "아직 풀 문제가 없어요"
+                : learned
+                  ? "다시 풀어 보기"
+                  : `다 읽었으면 문제 ${questions.length}개 풀기`}
+            </PrimaryButton>
+          </div>
         </div>
       </main>
     );
