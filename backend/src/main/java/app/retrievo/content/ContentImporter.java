@@ -6,6 +6,7 @@ import app.retrievo.content.file.ContentFile.QuestionDef;
 import app.retrievo.content.file.ContentFileParser;
 import app.retrievo.content.file.ContentValidationException;
 import app.retrievo.content.file.ContentValidator;
+import app.retrievo.content.file.LessonDaySet;
 import app.retrievo.content.file.LessonSteps;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -91,6 +92,8 @@ public class ContentImporter {
         int unchanged = 0;
         Set<String> seen = new HashSet<>();
 
+        // 배운 날에 푸는 문제: 핵심 질문마다 첫 판정 문제 하나. 핵심 질문이 없는 파일은 판정 문제 전부
+        Set<String> lessonDay = LessonDaySet.keys(file);
         List<QuestionDef> defs = file.questions();
         for (int order = 0; order < defs.size(); order++) {
             QuestionDef def = defs.get(order);
@@ -106,14 +109,16 @@ public class ContentImporter {
             Optional<Question> existing = questions.findByExternalKey(key);
             if (existing.isEmpty()) {
                 Question question = questions.save(
-                        new Question(key, lesson.getId(), concept.getId(), type.purpose(), status, order));
+                        new Question(key, lesson.getId(), concept.getId(), type.purpose(), status, order,
+                                lessonDay.contains(def.key())));
                 question.pointTo(versions.save(new QuestionVersion(question.getId(), 1, content, hash)));
                 created++;
                 continue;
             }
 
             Question question = existing.get();
-            question.update(lesson.getId(), concept.getId(), type.purpose(), status, order);
+            question.update(lesson.getId(), concept.getId(), type.purpose(), status, order,
+                    lessonDay.contains(def.key()));
             QuestionVersion current = versions.findById(question.getCurrentVersionId()).orElseThrow();
             if (current.getContentHash().equals(hash)) {
                 unchanged++;

@@ -32,7 +32,7 @@ class ConceptProgresses {
 
     /**
      * 레슨에서 낸 답을 반영한다. 처음 푼 개념이면 배우는 중(0단계)으로 만들고,
-     * 배우는 중인 개념의 판정 문제를 오늘 모두 한 번씩 맞혔으면 1단계로 올려 3일 뒤 확인을 잡는다 (ADR-021).
+     * 배우는 중인 개념의 배운 날 문제(lesson_day)를 오늘 모두 한 번씩 맞혔으면 1단계로 올려 3일 뒤 확인을 잡는다 (ADR-021).
      * 틀린 문제는 화면이 다시 내므로, 맞힐 때까지 풀면 그날 기준을 넘는다.
      * 이미 1단계 이상인 개념은 레슨에서 다시 풀어도 일정이 바뀌지 않는다.
      */
@@ -51,7 +51,7 @@ class ConceptProgresses {
         if (stage != ReviewSchedule.LEARNING) {
             return;
         }
-        // 레슨에 나오는 판정 문제 수와, 그중 오늘 맞힌 문제 수. 방금 저장한 이 답도 센다 (같은 트랜잭션)
+        // 배운 날에 푸는 판정 문제 수와, 그중 오늘 맞힌 문제 수. 방금 저장한 이 답도 센다 (같은 트랜잭션)
         record Count(int total, int correctToday) {
         }
         Count count = jdbc.sql("""
@@ -64,6 +64,7 @@ class ConceptProgresses {
                                )) as correct_today
                         from question q
                         where q.concept_id = ? and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT'
+                          and q.lesson_day
                         """)
                 .params(userId, today, conceptId)
                 .query((rs, n) -> new Count(rs.getInt("total"), rs.getInt("correct_today")))

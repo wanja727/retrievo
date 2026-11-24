@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * 콘텐츠 조회. 사용자에게는 검수 완료(REVIEWED)된 판정 문제만 보인다.
+ * 레슨에서는 그 가운데 배운 날에 푸는 문제(lesson_day)만 묻고, 나머지는 지연 확인에서 묻는다.
  * 연습(서술형) 문제는 자기 채점 화면을 만들 때 연다.
  */
 @Service
@@ -32,7 +33,7 @@ public class LessonQueryService {
         this.json = json;
     }
 
-    /** key: 주제를 뺀 레슨 키. dev-lessons의 레슨 slug와 같다 (예: jpa-n-plus-1) */
+    /** key: 주제를 뺀 레슨 키. dev-lessons의 레슨 slug와 같다 (예: jpa-n-plus-1). questionCount: 배운 날에 푸는 문제 수 */
     public record LessonSummary(long id, String key, String unit, String title, int questionCount) {
     }
 
@@ -44,7 +45,8 @@ public class LessonQueryService {
         return jdbc.sql("""
                         select l.id, l.external_key, u.title as unit, l.title, l.body,
                                (select count(*) from question q
-                                where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT')
+                                where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT'
+                                  and q.lesson_day)
                                    as question_count
                         from lesson l join unit u on u.id = l.unit_id
                         where l.id = ?
@@ -72,7 +74,8 @@ public class LessonQueryService {
         return jdbc.sql("""
                         select l.id, l.external_key, u.title as unit, l.title,
                                (select count(*) from question q
-                                where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT')
+                                where q.lesson_id = l.id and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT'
+                                  and q.lesson_day)
                                    as question_count
                         from lesson l join unit u on u.id = l.unit_id
                         order by u.sort_order, l.sort_order, l.id
@@ -87,6 +90,7 @@ public class LessonQueryService {
         return externalKey.substring(externalKey.indexOf('/') + 1);
     }
 
+    /** 레슨에서 푸는 문제: 배운 날에 푸는 판정 문제 */
     public List<QuestionView> questions(long lessonId) {
         boolean exists = jdbc.sql("select exists (select 1 from lesson where id = ?)")
                 .param(lessonId).query(Boolean.class).single();
@@ -97,6 +101,7 @@ public class LessonQueryService {
                         select qv.id, q.concept_id, qv.type, qv.body, qv.code, qv.choices
                         from question q join question_version qv on qv.id = q.current_version_id
                         where q.lesson_id = ? and q.status = 'REVIEWED' and q.purpose = 'JUDGMENT'
+                          and q.lesson_day
                         order by q.sort_order, q.id
                         """)
                 .param(lessonId)
