@@ -31,28 +31,33 @@ public class Question {
 
     private int sortOrder;
 
+    /** 배운 날에 푸는 문제인지. 아니면 지연 확인에서만 묻는다 (LessonDaySet) */
+    private boolean lessonDay;
+
     private Long currentVersionId;
 
     protected Question() {
     }
 
     public Question(String externalKey, Long lessonId, Long conceptId, QuestionPurpose purpose,
-            QuestionStatus status, int sortOrder) {
+            QuestionStatus status, int sortOrder, boolean lessonDay) {
         this.externalKey = externalKey;
         this.lessonId = lessonId;
         this.conceptId = conceptId;
         this.purpose = purpose;
         this.status = status;
         this.sortOrder = sortOrder;
+        this.lessonDay = lessonDay;
     }
 
     public void update(Long lessonId, Long conceptId, QuestionPurpose purpose, QuestionStatus status,
-            int sortOrder) {
+            int sortOrder, boolean lessonDay) {
         this.lessonId = lessonId;
         this.conceptId = conceptId;
         this.purpose = purpose;
         this.status = status;
         this.sortOrder = sortOrder;
+        this.lessonDay = lessonDay;
     }
 
     public void hide() {
@@ -89,6 +94,10 @@ public class Question {
 
     public int getSortOrder() {
         return sortOrder;
+    }
+
+    public boolean isLessonDay() {
+        return lessonDay;
     }
 
     public Long getCurrentVersionId() {

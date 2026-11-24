@@ -534,6 +534,68 @@ class LearningLoopTest extends IntegrationTest {
         return json.readTree(content);
     }
 
+    /** 핵심 질문 둘, 질문마다 판정 문제 둘. 배운 날에는 질문마다 첫 문제만 묻는다 */
+    private static final String CORE_QUESTIONS = """
+            subject: {key: dev, name: 개발자 면접}
+            lesson: {key: cq, title: 핵심 질문 레슨, unit: JPA, order: 7}
+            concepts:
+              - {key: core, name: 핵심 질문 레슨}
+            coreQuestions:
+              - {key: q1, text: 첫째 질문}
+              - {key: q2, text: 둘째 질문}
+            questions:
+              - {key: q1-book, concept: core, coreQuestion: q1, type: ox, status: reviewed, difficulty: 1, body: 본문의 예시로 묻는 문제, answer: O, explanation: 설명}
+              - {key: q1-moved, concept: core, coreQuestion: q1, type: ox, status: reviewed, difficulty: 1, body: 다른 상황으로 옮긴 문제, answer: X, explanation: 설명}
+              - {key: q2-draft, concept: core, coreQuestion: q2, type: ox, status: draft, difficulty: 1, body: 아직 검수하지 않은 문제, answer: O, explanation: 설명}
+              - {key: q2-book, concept: core, coreQuestion: q2, type: ox, status: reviewed, difficulty: 1, body: 본문의 예시로 묻는 문제 2, answer: O, explanation: 설명}
+              - {key: q2-moved, concept: core, coreQuestion: q2, type: ox, status: reviewed, difficulty: 1, body: 다른 상황으로 옮긴 문제 2, answer: X, explanation: 설명}
+              - {key: interview, concept: core, coreQuestion: all, type: descriptive, status: reviewed, difficulty: 2, body: 설명해 보세요, explanation: 설명, checklist: [하나, 둘, 셋, 넷]}
+            """;
+
+    @Test
+    void 핵심_질문이_있는_레슨은_질문마다_첫_문제만_배운_날에_묻는다() throws Exception {
+        importer.importYaml("cq.yaml", CORE_QUESTIONS);
+        long cq = jdbc.queryForObject("select id from lesson where external_key = 'dev/cq'", Long.class);
+
+        // 검수 완료된 판정 문제 가운데 질문마다 파일에서 가장 먼저 나오는 것. 검수 전 문제는 건너뛴다
+        assertThat(jdbc.queryForList("select external_key from question where lesson_id = ? and lesson_day order by sort_order",
+                String.class, cq)).containsExactly("dev/cq/q1-book", "dev/cq/q2-book");
+
+        JsonNode questions = getJson("/api/lessons/" + cq + "/questions");
+        assertThat(questions).hasSize(2);
+        assertThat(questions.get(0).get("body").asText()).isEqualTo("본문의 예시로 묻는 문제");
+        JsonNode lessons = getJson("/api/lessons");
+        assertThat(lessons.get(1).get("key").asText()).isEqualTo("cq");
+        assertThat(lessons.get(1).get("questionCount").asInt()).isEqualTo(2);
+
+        // 두 문제만 맞히면 배운 것으로 친다. 판정 문제는 넷이지만 나머지 둘은 풀지 않았다
+        submit(questions.get(0).get("questionVersionId").asLong(), "O", null).andExpect(status().isOk());
+        submit(questions.get(1).get("questionVersionId").asLong(), "O", null).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("""
+                select p.stage from concept_progress p join concept c on c.id = p.concept_id
+                where p.user_id = ? and c.external_key = 'dev/cq/core'
+                """, Integer.class, userId)).isEqualTo(1);
+
+        // 3일 뒤의 확인에는 배운 날에 풀지 않은 문제가 나온다
+        clock.advance(Duration.ofDays(3));
+        JsonNode check = null;
+        for (JsonNode c : getJson("/api/me/delayed-checks/today")) {
+            if (c.get("conceptName").asText().equals("핵심 질문 레슨")) {
+                check = c;
+            }
+        }
+        assertThat(check).isNotNull();
+        assertThat(check.get("question").get("body").asText()).isEqualTo("다른 상황으로 옮긴 문제");
+    }
+
+    @Test
+    void 핵심_질문이_없는_레슨은_판정_문제를_모두_배운_날에_묻는다() throws Exception {
+        assertThat(jdbc.queryForObject(
+                "select count(*) from question where lesson_id = ? and purpose = 'JUDGMENT' and lesson_day",
+                Integer.class, lessonId)).isEqualTo(3);
+        assertThat(getJson("/api/lessons/" + lessonId + "/questions")).hasSize(3);
+    }
+
     private JsonNode getJson(String url) throws Exception {
         return body(mvc.perform(get(url).header("X-Dev-User-Id", userId)));
     }
