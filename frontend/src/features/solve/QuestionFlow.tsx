@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { BottomActions, PrimaryButton } from "@/components/ui/buttons";
 import { api, type QuestionView, type SubmissionMode, type SubmissionResult } from "@/lib/api";
+import { choiceOrder } from "@/lib/grading";
 import { ChooseStep } from "./ChooseStep";
 import { ResultStep } from "./ResultStep";
 
@@ -41,6 +42,8 @@ export function QuestionFlow({
    * 응답을 못 받아 다시 보내도 서버가 처음 결과를 돌려준다 (재시도·두 번 누르기)
    */
   const [clientSubmissionId, setClientSubmissionId] = useState<string | null>(null);
+  /** 보기 순서는 문제를 열 때 한 번 섞고, 고르는 동안에는 그대로 둔다 */
+  const [order] = useState(() => choiceOrder(question.choices ?? []));
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<SubmissionResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +84,7 @@ export function QuestionFlow({
         <ChooseStep
           question={question}
           context={context}
+          order={order}
           selected={selected}
           onSelect={setSelected}
         />

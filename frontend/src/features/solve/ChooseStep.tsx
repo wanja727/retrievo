@@ -10,10 +10,13 @@ const LETTERS = "ABCDEFGH";
 export function ChooseStep({
   question: q,
   context,
+  order,
   selected,
   onSelect,
 }: {
   question: QuestionView;
+  /** 보기를 보여 줄 순서 (원래 자리의 번호). 문제를 열 때 한 번 정한다 */
+  order: number[];
   /** 질문 위에 작게 보이는 맥락. 예: "JPA N+1 문제, 틀렸던 문제 다시" */
   context: string;
   selected: string | null;
@@ -36,7 +39,7 @@ export function ChooseStep({
           {q.type === "OX" ? (
             <OxChoice selected={selected} onSelect={onSelect} />
           ) : (
-            <Choices choices={q.choices ?? []} selected={selected} onSelect={onSelect} />
+            <Choices choices={q.choices ?? []} order={order} selected={selected} onSelect={onSelect} />
           )}
         </>
       )}
@@ -47,17 +50,21 @@ export function ChooseStep({
 
 function Choices({
   choices,
+  order,
   selected,
   onSelect,
 }: {
   choices: string[];
+  order: number[];
   selected: string | null;
   onSelect: (value: string) => void;
 }) {
   return (
     <div role="radiogroup" aria-label="보기" className="mx-6 mt-4 flex flex-col gap-2">
-      {choices.map((choice, i) => {
-        const value = String(i + 1);
+      {order.map((original, i) => {
+        // 글자(A, B, ...)는 보이는 자리에 붙이고, 고른 값은 원래 번호로 보낸다
+        const choice = choices[original];
+        const value = String(original + 1);
         const on = selected === value;
         return (
           <button
