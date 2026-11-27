@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BottomNav } from "@/components/ui/BottomNav";
-import { ArrowRightIcon } from "@/components/ui/icons";
+import { ArrowRightIcon, SearchIcon } from "@/components/ui/icons";
 import { LoadError } from "@/components/ui/LoadError";
 import { RecordChip } from "@/components/ui/Record";
 import { api } from "@/lib/api";
@@ -46,11 +46,19 @@ export function LessonsScreen() {
     <main className="app-frame">
       <header className="flex h-14 shrink-0 items-center px-6">
         <h1 className="text-[17px] font-semibold tracking-[-0.3px]">레슨</h1>
+        {/* 찾아보기: 용어를 찾아 짧게 보고 레슨으로 간다. 레슨을 고르는 화면이라 여기에 둔다 */}
+        <Link
+          href="/terms"
+          aria-label="찾아보기"
+          className="-mr-1 ml-auto flex size-10 items-center justify-center rounded-full text-sub active:bg-surface"
+        >
+          <SearchIcon />
+        </Link>
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
           aria-label="숫자의 뜻"
-          className="ml-auto inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent-ink"
+          className="ml-1 inline-flex size-6 items-center justify-center rounded-full bg-accent-soft text-[11px] font-semibold text-accent-ink"
         >
           ?
         </button>

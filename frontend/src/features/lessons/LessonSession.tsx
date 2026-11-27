@@ -16,6 +16,7 @@ import {
   lessonSiteOrigin,
   nextCheckLabel,
   type LessonProgress,
+  type LessonSection,
 } from "@/lib/lessonProgress";
 import { serviceDate } from "@/lib/schedule";
 import { useRemote } from "@/lib/useRemote";
@@ -37,7 +38,7 @@ function isMark(m: unknown): m is Mark {
  * 이미 배운 레슨(1단계 이상)은 다시 풀어도 연습으로만 기록되고 일정은 바뀌지 않는다.
  * 순서: 레슨 사이트의 본문을 앱 안에 띄움 → 문제 풀기 → 결과 (ADR-024)
  */
-export function LessonSession({ lessonId }: { lessonId: number }) {
+export function LessonSession({ lessonId, at }: { lessonId: number; at?: LessonSection }) {
   const fetchLesson = useCallback(async () => {
     const [lesson, questions, concepts] = await Promise.all([
       api.lesson(lessonId),
@@ -152,7 +153,8 @@ export function LessonSession({ lessonId }: { lessonId: number }) {
         )}
         <iframe
           ref={frameRef}
-          src={lessonPageUrl(lesson.key, true)}
+          // at이 있으면 본문이 그 구역의 위치를 scroll로 알려 준다
+          src={lessonPageUrl(lesson.key, true, at)}
           title={`${lesson.title} 레슨 본문`}
           className="block w-full border-0 bg-white"
           style={{ height: fitted ? `${frameHeight}px` : "100dvh" }}

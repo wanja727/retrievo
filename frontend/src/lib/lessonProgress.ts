@@ -59,8 +59,29 @@ export function lessonSiteOrigin(): string {
  * 레슨 본문 페이지. 본문은 dev-lessons 사이트에 있고 앱은 그 페이지를 iframe으로 띄운다.
  * embed를 주면 앱 안 화면용 주소다 (사이트 이동 링크를 숨기고 바깥 링크는 새 탭으로 연다).
  */
-export function lessonPageUrl(key: string, embed = false): string {
-  return `${LESSON_SITE}/lessons/${encodeURIComponent(key)}/${embed ? "?embed=1" : ""}`;
+export function lessonPageUrl(key: string, embed = false, at?: LessonSection): string {
+  return `${LESSON_SITE}/lessons/${encodeURIComponent(key)}/${embed ? "?embed=1" : ""}${at ? `#${at}` : ""}`;
+}
+
+/** 레슨 본문의 구역: 질문(q1~q9)이나 실무에서는(practice). 레슨 페이지의 #앵커와 같다 */
+export type LessonSection = `q${number}` | "practice";
+export function asLessonSection(v: unknown): LessonSection | undefined {
+  return typeof v === "string" && /^(q[1-9]|practice)$/.test(v) ? (v as LessonSection) : undefined;
+}
+
+/** 찾아보기 페이지. 용어 카드도 레슨 사이트에 있고 앱은 iframe으로 띄운다 */
+export function termsPageUrl(): string {
+  return `${LESSON_SITE}/terms/?embed=1`;
+}
+
+/**
+ * 찾아보기에서 고른 레슨을 앱의 레슨 화면 주소로 바꾼다. 앱에 없는 레슨이면 null이다 (그때는 사이트에서 연다).
+ * 구역(at)은 주소에 남겨 레슨 화면이 그 자리로 스크롤하게 한다.
+ */
+export function appLessonHref(lessons: LessonSummary[], key: string, at?: LessonSection): string | null {
+  const lesson = lessons.find((l) => l.key === key);
+  if (!lesson) return null;
+  return `/lessons/${lesson.id}${at ? `?at=${at}` : ""}`;
 }
 
 /** 관리 중인 레슨을 다음 확인이 가까운 순으로. 배우는 중(확인일 없음)은 맨 앞 */

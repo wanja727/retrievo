@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ConceptStatus, LessonSummary } from "./api/types";
-import { byNextCheck, isDueToday, lessonProgress, nextCheckLabel } from "./lessonProgress";
+import {
+  appLessonHref,
+  asLessonSection,
+  byNextCheck,
+  isDueToday,
+  lessonPageUrl,
+  lessonProgress,
+  nextCheckLabel,
+} from "./lessonProgress";
 import { serviceDate } from "./schedule";
 
 const lesson = (id: number): LessonSummary => ({ id, key: `l${id}`, unit: "JPA", title: `레슨 ${id}`, questionCount: 8 });
@@ -87,5 +95,30 @@ describe("serviceDate", () => {
     // 2026-11-18 04:00 KST
     expect(serviceDate(0, Date.parse("2026-11-17T19:00:00Z"))).toBe("2026-11-18");
     expect(serviceDate(3, Date.parse("2026-11-17T19:00:00Z"))).toBe("2026-11-21");
+  });
+});
+
+describe("찾아보기에서 레슨으로", () => {
+  it("레슨 키를 앱의 레슨 화면 주소로 바꾸고, 구역은 at으로 남긴다", () => {
+    const lessons = [lesson(3), lesson(7)];
+    expect(appLessonHref(lessons, "l7", "q3")).toBe("/lessons/7?at=q3");
+    expect(appLessonHref(lessons, "l3")).toBe("/lessons/3");
+  });
+
+  it("앱에 없는 레슨이면 null이다", () => {
+    expect(appLessonHref([lesson(3)], "inheritance-embedded", "q1")).toBeNull();
+  });
+
+  it("구역은 질문 id와 practice만 받는다", () => {
+    expect(asLessonSection("q3")).toBe("q3");
+    expect(asLessonSection("practice")).toBe("practice");
+    expect(asLessonSection("q0")).toBeUndefined();
+    expect(asLessonSection("q3#x")).toBeUndefined();
+    expect(asLessonSection(undefined)).toBeUndefined();
+  });
+
+  it("레슨 본문 주소에 구역을 #앵커로 붙인다", () => {
+    expect(lessonPageUrl("jpa-basics", true, "q2")).toMatch(/\/lessons\/jpa-basics\/\?embed=1#q2$/);
+    expect(lessonPageUrl("jpa-basics", true)).toMatch(/\/lessons\/jpa-basics\/\?embed=1$/);
   });
 });
