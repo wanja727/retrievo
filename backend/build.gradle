@@ -17,6 +17,11 @@ wrapper {
     gradleVersion = '8.14.3'
 }
 
+// 빌드 시각을 앱에 넣는다 (BuildProperties). 문제 가져오기가 서버 코드가 바뀌었는지 이것으로 안다
+springBoot {
+    buildInfo()
+}
+
 repositories {
     mavenCentral()
 }
