@@ -18,6 +18,7 @@
   - Cloud Run에 배포한다.
 - **문제 가져오기:** 서버가 시작할 때 문제 파일을 가져온다. 바뀌지 않은 문제는 그대로 둔다. 문제 파일과 서버 빌드가 지난번과 같으면 통째로 건너뛴다(`content_import_state`). 그래서 배포 뒤 첫 시작만 오래 걸리고, 0대에서 다시 켜질 때는 빠르다.
 - **콜드 스타트:** 이미지를 만들 때 CDS 파일(`app.jsa`)을 만든다. 로컬(CPU 1개, 512MB)에서 시작 시간이 16.9초에서 약 4초로 줄었다(2026-11-27).
+- **깨워 두기:** Cloud Scheduler 작업 `retrievo-keep-warm`(서울, 무료 3개 안)이 한국 시간 6:00~23:50에 10분마다 `/api/lessons`를 부른다. 그 시간대에는 0대로 내려가지 않는다. 프론트도 페이지를 열 때 `/api/me`를 하나 먼저 보내 깨운다(`frontend/src/app/layout.tsx`). GitHub Actions 예약 실행으로 먼저 해 봤지만 한 번도 돌지 않아서(2026-11-27, 같은 보고가 GitHub 커뮤니티에 여럿 있다) 옮겼다.
 - **GitHub 인증:** 키 파일 없이 Workload Identity Federation으로 한다. 이 저장소의 main 브랜치에서만 배포할 수 있다.
 - **비밀값:** DB 비밀번호와 카카오 Client Secret은 Secret Manager에 둔다. 나머지 설정은 GitHub 저장소 변수로 둔다.
 
@@ -204,7 +205,14 @@ dev-lessons main에 문제 파일이 들어가면 자동으로 다시 배포하�
 
 ## 운영 메모
 
-- **콜드 스타트:** 한동안 요청이 없다가 처음 들어온 요청은 서버가 켜지는 동안 10초 안팎 기다린다. 그 뒤로는 빠르다. 비용 0원을 위해 고른 부분이다. 최소 1대를 켜 두면 월 수천 원이 든다.
+- **콜드 스타트:** 한동안 요청이 없다가 처음 들어온 요청은 서버가 켜지는 동안 10초 안팎 기다린다. 한국 시간 6시~밤 12시에는 Cloud Scheduler가 깨워 두어 거의 겪지 않는다. 비용 0원을 위해 고른 부분이다. 최소 1대를 켜 두면 월 수천 원이 든다.
+
+Cloud Scheduler 작업은 Cloud Shell에서 만들었다.
+
+```bash
+gcloud services enable cloudscheduler.googleapis.com
+gcloud scheduler jobs create http retrievo-keep-warm --location=asia-northeast3 \n  --schedule="*/10 6-23 * * *" --time-zone="Asia/Seoul" \n  --uri="https://retrievo-tau.vercel.app/api/lessons" --http-method=GET --attempt-deadline=60s
+```
 - **문제 파일이 바뀌었을 때:** dev-lessons main에 들어가면 자동으로 다시 배포한다(6단계). 토큰이 만료됐거나 급할 때는 Actions → Backend → Run workflow로 손으로 배포한다.
 - **DB 스키마:** 앱 테이블은 Supabase의 `retrievo` 스키마에 있다. Supabase 대시보드 Table Editor에서는 스키마 선택을 `retrievo`로 바꿔야 보인다.
 - **비용 상한:**
