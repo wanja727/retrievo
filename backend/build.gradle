@@ -37,6 +37,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.session:spring-session-jdbc'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    // 핵심 질문의 답을 채점한다 (ADR-027)
+    implementation 'com.anthropic:anthropic-java:3.3.0'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
@@ -57,6 +59,20 @@ tasks.register('checkContent', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'app.retrievo.content.file.ContentCheck'
     args = [project.findProperty('contentDir') ?: 'missing-contentDir']
+}
+
+// 채점 품질 측정 (ADR-027). 사람이 판정을 정해 둔 답 세트를 모델에 채점시켜 얼마나 맞는지 센다
+// 예: ./gradlew gradeEval -Pmodels=claude-haiku-5-5,claude-sonnet-5-5
+// ANTHROPIC_API_KEY가 없으면 답 세트가 문제 파일과 맞는지만 확인한다. 모델을 부르면 돈이 든다
+tasks.register('gradeEval', JavaExec) {
+    group = 'verification'
+    description = '채점 품질을 잰다. -PcontentDir=<문제 파일 디렉터리> -Pmodels=<모델,모델>'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'app.retrievo.grading.GradingEval'
+    args = [
+        project.findProperty('contentDir') ?: '../../dev-lessons/content/questions',
+        project.findProperty('models') ?: 'claude-haiku-5-5,claude-sonnet-5-5',
+    ]
 }
 
 tasks.named('test') {
