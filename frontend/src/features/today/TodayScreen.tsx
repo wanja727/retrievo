@@ -185,12 +185,12 @@ function Streak({ home }: { home: Home }) {
           return (
             <li key={date} className="flex flex-col items-center gap-1.5">
               <span
-                className={`flex size-9 items-center justify-center rounded-full ${
+                className={`flex size-8 items-center justify-center rounded-full ${
                   on ? "bg-accent text-white" : isToday ? "border-[1.5px] border-accent" : "bg-surface"
                 }`}
               >
                 {on && (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12.5l4.5 4.5L19 7.5" />
                   </svg>
                 )}
