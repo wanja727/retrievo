@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Retrievo 디자인 토큰 (노션 ADR-023). 레슨 사이트(dev-lessons)의 "soft pastel" 테마와 같은 색이다
+ * Retrievo 디자인 토큰 (노션 ADR-023). 규칙은 docs/design.md에 있다. 레슨 사이트(dev-lessons)의 "soft pastel" 테마와 같은 색이다
  * 컨셉: 깔끔한 흰 바탕에 파스텔과 옅은 그라데이션
  * - 글자와 회색은 보랏빛이 도는 짙은 회색
  * - 라벤더(accent)는 테마 색: 누를 수 있는 것, 고른 것, 진행과 통과한 확인, 장기 기억
@@ -101,9 +101,6 @@ body {
   button.card:active,
   button.tile:active {
     background: var(--color-surface);
-  }
-  .soft-shadow {
-    box-shadow: 0 1px 2px rgb(59 57 68 / 0.1);
   }
 }
 

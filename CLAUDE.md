@@ -5,6 +5,7 @@
 - `backend/` Spring Boot 3.5, PostgreSQL, Flyway. Cloud Run에 배포한다
 - `frontend/` Next.js. Vercel에 배포한다. 규칙은 `frontend/AGENTS.md`
 - 문제 파일의 형식: `docs/content-format.md`. 배포: `docs/deploy.md`
+- 화면을 만들거나 고칠 때는 `docs/design.md`의 디자인 규칙을 따른다. 디자인 스킬의 권고와 부딪히면 이 문서가 이긴다
 
 ## 올리는 방식
 
