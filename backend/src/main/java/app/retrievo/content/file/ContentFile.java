@@ -23,8 +23,12 @@ public record ContentFile(
     public record ConceptDef(String key, String name) {
     }
 
-    /** 레슨의 핵심 질문. 문제가 어느 질문에서 나왔는지 묶는 데만 쓴다. 앱은 저장하지 않는다 */
-    public record CoreQuestionDef(String key, String text) {
+    /**
+     * 레슨의 핵심 질문. 문제가 어느 질문에서 나왔는지 묶는다.
+     * answer(모범 답)와 points(답에 들어 있어야 하는 핵심 포인트)는 복습에서 사용자가 이 질문에 직접 답할 때 쓴다.
+     * 둘은 선택이고, 적을 때는 함께 적는다.
+     */
+    public record CoreQuestionDef(String key, String text, String answer, List<String> points) {
     }
 
     public record QuestionDef(

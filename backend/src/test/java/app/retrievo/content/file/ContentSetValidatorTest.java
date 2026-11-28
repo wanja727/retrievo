@@ -118,6 +118,26 @@ class ContentSetValidatorTest {
     }
 
     @Test
+    void 핵심_질문의_모범_답과_포인트는_함께_적고_포인트는_1개에서_4개다() {
+        String base = LINE_PICK
+                .replace("questions:\n", "coreQuestions:\n  - key: q1\n    text: 경쟁 상태가 생기는 이유\nANSWER"
+                        + "questions:\n")
+                .replace("    concept: race\n", "    concept: race\n    coreQuestion: q1\n");
+        String answer = "    answer: 읽고 쓰는 사이에 다른 스레드가 끼어들기 때문이에요.\n";
+
+        assertThat(errors(base.replace("ANSWER", ""))).isEmpty();
+        assertThat(errors(base.replace("ANSWER", answer + "    points: [읽기와 쓰기가 한 동작이 아니에요, 그 사이에 끼어들어요]\n")))
+                .isEmpty();
+
+        assertThat(errors(base.replace("ANSWER", answer)))
+                .anyMatch(e -> e.contains("answer와 points는 함께 적는다"));
+        assertThat(errors(base.replace("ANSWER", answer + "    points: []\n")))
+                .anyMatch(e -> e.contains("points가 0개다"));
+        assertThat(errors(base.replace("ANSWER", answer + "    points: [하나, 둘, 셋, 넷, 다섯]\n")))
+                .anyMatch(e -> e.contains("points가 5개다"));
+    }
+
+    @Test
     void 핵심_질문이_없는_파일은_문제에_coreQuestion을_쓸_수_없다() {
         assertThat(errors(LINE_PICK)).isEmpty();
         assertThat(errors(LINE_PICK.replace("    concept: race\n", "    concept: race\n    coreQuestion: q1\n")))

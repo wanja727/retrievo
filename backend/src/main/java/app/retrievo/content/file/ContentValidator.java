@@ -25,6 +25,8 @@ public final class ContentValidator {
     private static final Pattern KEY = Pattern.compile("[a-z0-9][a-z0-9-]*");
     private static final int MIN_JUDGMENT_PER_CONCEPT = 2;
     private static final int RECOMMENDED_CHECKLIST = 4;
+    private static final int CORE_POINTS_MIN = 1;
+    private static final int CORE_POINTS_MAX = 4;
     /** 문제의 coreQuestion에 쓰는 값: 핵심 질문 전체를 아우르는 문제 */
     public static final String ALL_CORE_QUESTIONS = "all";
 
@@ -105,6 +107,7 @@ public final class ContentValidator {
                 String label = "coreQuestions[" + i + "]";
                 checkKey(label + ".key", c.key(), errors);
                 checkText(label + ".text", c.text(), errors);
+                checkCoreAnswer(label, c, errors);
                 if (ALL_CORE_QUESTIONS.equals(c.key())) {
                     errors.add(label + ": '" + ALL_CORE_QUESTIONS + "'은 핵심 질문 전체를 뜻하는 값이라 키로 쓸 수 없다");
                 } else if (c.key() != null && !coreQuestionKeys.add(c.key())) {
@@ -247,6 +250,25 @@ public final class ContentValidator {
             errors.add(label + ": coreQuestion이 없다. coreQuestions가 있는 파일은 모든 문제를 핵심 질문에 묶는다");
         } else if (!ALL_CORE_QUESTIONS.equals(q.coreQuestion()) && !coreQuestionKeys.contains(q.coreQuestion())) {
             errors.add(label + ": coreQuestion '" + q.coreQuestion() + "'가 coreQuestions에 없다");
+        }
+    }
+
+    /** 모범 답과 핵심 포인트는 선택이지만 함께 적는다. 포인트는 답을 채점하는 기준이라 수를 제한한다 */
+    private static void checkCoreAnswer(String label, CoreQuestionDef c, List<String> errors) {
+        if (c.answer() == null && c.points() == null) {
+            return;
+        }
+        if (c.answer() == null || c.points() == null) {
+            errors.add(label + ": answer와 points는 함께 적는다");
+            return;
+        }
+        checkText(label + ".answer", c.answer(), errors);
+        if (c.points().size() < CORE_POINTS_MIN || c.points().size() > CORE_POINTS_MAX) {
+            errors.add(label + ": points가 " + c.points().size() + "개다. "
+                    + CORE_POINTS_MIN + "~" + CORE_POINTS_MAX + "개로 적는다");
+        }
+        for (int i = 0; i < c.points().size(); i++) {
+            checkText(label + ".points[" + i + "]", c.points().get(i), errors);
         }
     }
 
