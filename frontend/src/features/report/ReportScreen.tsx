@@ -180,7 +180,7 @@ function CurveSection({ report }: { report: Report }) {
   );
 }
 
-const SHADES = ["bg-[#f1eff8]", "bg-[#ddd7fb]", "bg-[#b9aff6]", "bg-accent", "bg-accent-ink"];
+const SHADES = ["bg-[#f1eff8]", "bg-memory-1", "bg-memory-2", "bg-accent", "bg-accent-ink"];
 
 /** 꺼낸 날: 최근 26주 동안 답을 낸 날. 진할수록 그날 많이 꺼냈다 */
 function ActivitySection({ report }: { report: Report }) {

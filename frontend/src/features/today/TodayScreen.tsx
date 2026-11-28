@@ -93,7 +93,7 @@ export function TodayScreen() {
             style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: total }, (_, i) => (
-              <span key={i} className={`h-2 rounded-full ${i < done ? "bar-fill" : "bg-white"}`} />
+              <span key={i} className={`h-2 rounded-full ${i < done ? "bar-fill" : "bg-accent-line"}`} />
             ))}
           </div>
         )}
@@ -109,7 +109,7 @@ export function TodayScreen() {
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="숫자의 뜻"
-            className="inline-flex size-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-accent-ink"
+            className="relative inline-flex size-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-accent-ink before:absolute before:-inset-2.5"
           >
             ?
           </button>
@@ -205,7 +205,7 @@ function Streak({ home }: { home: Home }) {
 }
 
 /** 기억이 오래 갈수록 진해지는 색. 시작 전 → 학습 완료 → 3일 → 7일 → 장기 기억 */
-const MAP_SHADES = ["bg-surface", "bg-[#ddd7fb]", "bg-[#b9aff6]", "bg-accent", "bg-accent-ink"];
+const MAP_SHADES = ["bg-surface", "bg-memory-1", "bg-memory-2", "bg-accent", "bg-accent-ink"];
 
 /**
  * 기억 지도: 한 칸이 레슨 하나이고, 더 오래 기억할수록 칸이 진해진다.

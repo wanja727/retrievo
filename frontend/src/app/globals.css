@@ -26,6 +26,9 @@
   --color-accent-solid: #7064d4;
   --color-accent-solid-press: #665aca;
   --color-accent-soft: #f5f2ff;
+  /* 기억 지도와 꺼낸 날 칸의 단계. surface → memory-1 → memory-2 → accent → accent-ink 순으로 진해진다 */
+  --color-memory-1: #ddd7fb;
+  --color-memory-2: #b9aff6;
   --color-accent-line: #cfc6fb;
   --color-ok: #3bb98c;
   --color-ok-ink: #1f8a63;

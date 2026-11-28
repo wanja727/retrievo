@@ -1,9 +1,15 @@
 "use client";
 
+import { useEffect, useEffectEvent, useRef } from "react";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { RecordChip } from "@/components/ui/Record";
 
-/** 첫 사용 때 한 번만 숫자의 뜻을 알려준다. 이후에는 물음표 버튼으로만 본다 (ADR-018) */
+const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/**
+ * 첫 사용 때 한 번만 숫자의 뜻을 알려준다. 이후에는 물음표 버튼으로만 본다 (ADR-018)
+ * 열리면 시트로 포커스를 옮기고, Tab은 시트 안에서만 돌고, Esc로 닫는다. 닫으면 연 버튼으로 포커스를 돌려준다
+ */
 export function FirstRunSheet({
   onClose,
   title = "처음이라 한 번만 알려 드려요",
@@ -12,14 +18,49 @@ export function FirstRunSheet({
   /** 물음표나 "나" 화면에서 다시 열 때는 "숫자의 뜻"처럼 바꿔 쓴다 */
   title?: string;
 }) {
+  const dialog = useRef<HTMLDivElement>(null);
+
+  const onKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+    if (e.key !== "Tab" || !dialog.current) return;
+    const items = [...dialog.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === dialog.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (active === last || !dialog.current.contains(active))) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.current?.focus();
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      opener?.focus();
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-20 mx-auto flex max-w-[430px] flex-col justify-end">
       <div className="absolute inset-0 bg-[#2b2740]/25" onClick={onClose} aria-hidden="true" />
       <div
+        ref={dialog}
         role="dialog"
         aria-modal="true"
         aria-labelledby="first-run-title"
-        className="fade-up relative rounded-t-3xl bg-white px-6 pt-3 pb-7"
+        tabIndex={-1}
+        className="fade-up relative rounded-t-3xl bg-white px-6 pt-3 pb-7 outline-none"
       >
         <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-line-strong" />
         <h2 id="first-run-title" className="text-[22px] font-semibold tracking-[-0.4px]">
