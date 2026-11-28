@@ -485,6 +485,11 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(learned.get("retrievals").asInt()).isEqualTo(2);
         assertThat(learned.get("checksDone").asInt()).isZero();
         assertThat(learned.get("checksTotal").asInt()).isZero();
+        // 이번 주에 푼 문제는 날마다 세고, 지연 확인을 한 적이 없으면 최근 기억률의 표본은 0이다
+        assertThat(learned.get("weekSolved")).hasSize(1);
+        assertThat(learned.get("weekSolved").get(0).get("date").asText()).isEqualTo(DAY0.toString());
+        assertThat(learned.get("weekSolved").get(0).get("count").asInt()).isEqualTo(2);
+        assertThat(learned.get("recall").get("total").asInt()).isZero();
 
         // 다음 날 아직 답을 내지 않았으면 연속은 어제까지 센 값이다
         clock.advance(Duration.ofDays(1));
@@ -506,6 +511,11 @@ class LearningLoopTest extends IntegrationTest {
         assertThat(done.get("activeDates")).hasSize(2);
         assertThat(done.get("learned").asInt()).isEqualTo(1);
         assertThat(done.get("retrievals").asInt()).isEqualTo(3);
+        // 틀린 확인은 최근 기억률의 전체에만 든다
+        assertThat(done.get("recall").get("correct").asInt()).isZero();
+        assertThat(done.get("recall").get("total").asInt()).isEqualTo(1);
+        assertThat(done.get("weekSolved")).hasSize(2);
+        assertThat(done.get("weekSolved").get(1).get("count").asInt()).isEqualTo(1);
     }
 
     @Test
