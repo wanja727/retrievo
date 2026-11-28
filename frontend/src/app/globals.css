@@ -121,6 +121,56 @@ body {
   .fade-up {
     animation: fade-up 240ms ease-out both;
   }
+  /* 값이 쌓였다는 것을 보여 주는 움직임: 막대는 왼쪽에서, 요일 막대는 아래에서 자라고, 고리는 돌며 그려진다 */
+  .grow-x {
+    transform-origin: left;
+    animation: grow-x 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .grow-y {
+    transform-origin: bottom;
+    animation: grow-y 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .ring-draw {
+    animation: ring-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  /* 끝낸 일의 체크가 살짝 튀어나온다 */
+  .pop {
+    animation: pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  /* 누를 수 있는 묶음은 누르는 동안 살짝 줄어든다 */
+  a.card,
+  button.card {
+    transition: transform 120ms ease-out;
+  }
+  a.card:active,
+  button.card:active {
+    transform: scale(0.985);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-length);
+  }
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
 }
 
 @keyframes fade-up {

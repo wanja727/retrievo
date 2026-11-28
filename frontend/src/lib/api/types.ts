@@ -4,7 +4,7 @@
  * - TodayCheck, ConceptStatus: learning/DelayedCheckController
  * - LessonSummary, LessonDetail: content/LessonQueryService
  * - Report: learning/ReportController.Report
- * - Home: learning/HomeController.Home. bestStage·record·retrievals와 함께 쌓이기만 하는 성장 값이다. 뜻은 lib/memory.ts (ADR-025)
+ * - Home: learning/HomeController.Home. 오늘 화면의 값이다. 계산은 lib/home.ts, 성장 값의 뜻은 lib/memory.ts (ADR-025)
  * - Me: auth/MeController.Me
  * - SubmitRequest / SubmissionResult: learning/SubmitRequest.java, learning/SubmissionResult.java
  */
@@ -101,7 +101,7 @@ export interface Report {
   activity: { date: string; count: number }[];
 }
 
-/** 오늘 화면. 오늘 확인의 진행과, 쌓이기만 하는 값들 */
+/** 오늘 화면. 오늘 확인의 진행, 쌓이는 값들, 이번 주에 푼 문제와 최근 기억률 */
 export interface Home {
   today: string;
   /** 오늘 끝낸 확인 수 */
@@ -118,6 +118,10 @@ export interface Home {
   longTerm: number;
   /** 지금까지 낸 답 수 */
   retrievals: number;
+  /** 이번 주(월~일)에 답을 낸 날과 그날 낸 답 수. 답이 없는 날은 빠진다 */
+  weekSolved: { date: string; count: number }[];
+  /** 최근 30일 동안 지연 확인에서 맞힌 수와 전체 수 */
+  recall: Rate;
 }
 
 export interface SubmitRequest {

@@ -6,7 +6,7 @@ type AsLink = Common & { href: string; onClick?: never; disabled?: never; type?:
 type AsButton = Common & { href?: never; onClick?: () => void; disabled?: boolean; type?: "button" | "submit" };
 
 const primary =
-  "flex h-14 w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold transition-colors";
+  "flex h-14 w-full items-center justify-center gap-2 rounded-full text-[17px] font-semibold transition-[background-color,scale] duration-150 active:scale-[0.98] motion-reduce:active:scale-100";
 
 /** 화면 아래의 테마 색 알약 버튼. 화면마다 하나만 둔다 */
 export function PrimaryButton(props: AsLink | AsButton) {

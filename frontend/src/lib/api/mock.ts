@@ -230,6 +230,7 @@ const lessonCorrectToday: Record<number, Set<number>> = {};
 /** 오늘 낸 답 수, 오늘 끝낸 확인 수, 지금까지 낸 답 수 (예시 값에서 시작한다) */
 let answersToday = 0;
 let checksDoneToday = 0;
+let checksCorrectToday = 0;
 let retrievals = 1284;
 
 /** 어제까지 이어진 연속 학습 일수 (예시 값) */
@@ -339,7 +340,7 @@ export const mockApi: RetrievoApi = {
 
   logout: () => delay(undefined),
 
-  me: () => delay({ id: 1, nickname: "me", joinedOn: daysFromToday(-30), days: 31 }),
+  me: () => delay({ id: 1, nickname: "완자", joinedOn: daysFromToday(-30), days: 31 }),
 
   home: () => {
     const today = daysFromToday(0);
@@ -354,6 +355,11 @@ export const mockApi: RetrievoApi = {
       learned: all.filter((p) => p.best >= 1).length,
       longTerm: all.filter((p) => p.best >= 4).length,
       retrievals,
+      // 예시 값: 이번 주의 지난 날은 정해 둔 수만큼, 오늘은 실제로 낸 답 수
+      weekSolved: weekDates(today)
+        .map((date, i) => ({ date, count: date < today ? [9, 16, 6, 21, 12, 14, 8][i] : date === today ? answersToday : 0 }))
+        .filter((d) => d.count > 0),
+      recall: { correct: 23 + checksCorrectToday, total: 28 + checksDoneToday },
     });
   },
 
@@ -396,6 +402,7 @@ export const mockApi: RetrievoApi = {
     answersToday += 1;
     retrievals += 1;
     if (request.mode === "DELAYED_CHECK") checksDoneToday += 1;
+    if (request.mode === "DELAYED_CHECK" && correct) checksCorrectToday += 1;
     const before = progress[q.conceptId]?.best ?? 0;
     if (request.mode === "LESSON") recordLessonAnswer(q, correct);
     else if (request.mode === "DELAYED_CHECK") recordCheck(q.conceptId, correct);

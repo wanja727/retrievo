@@ -67,9 +67,8 @@ export function FirstRunSheet({
           {title}
         </h2>
         <dl className="mt-[18px] flex flex-col gap-4">
-          <Row term={<span className="text-[22px] leading-[1.1] font-semibold tracking-[-0.5px]">1/3</span>}>
-            <b className="text-ink">큰 숫자</b>는 오늘 꺼낸 개념 수예요. 정해 둔 분량이 아니라, 다시 확인할 때가 된 개념만
-            물어요.
+          <Row term={<span className="text-[17px] leading-[1.3] font-semibold tracking-[-0.3px]">복습 3개</span>}>
+            <b className="text-ink">오늘 할 일의 복습</b>은 정해 둔 분량이 아니에요. 다시 확인할 때가 된 개념만 물어요.
           </Row>
           <Row term={<RecordChip best={1} />}>
             레슨 문제를 모두 맞히면 <b className="text-ink">학습 완료</b>예요. 그 뒤로는 3일, 7일, 21일 뒤에 다른 문제로
